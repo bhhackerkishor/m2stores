@@ -194,8 +194,10 @@ const payload = {
     try {
       live = await this.getPaymentStatus(merchantTransactionId);
     } catch {
-      // If we cannot re-verify with PhonePe, reject rather than trust.
-      throw new AppError("Unable to verify webhook with provider", 502, "PROVIDER_UNREACHABLE");
+      // Provider temporarily unreachable — return 500 so PhonePe retries later
+      // instead of permanently rejecting the webhook
+      logger.warn("Provider unreachable during webhook verification, will retry", "payment", { merchantTransactionId });
+      throw new AppError("Provider temporarily unreachable, will retry", 503, "PROVIDER_UNREACHABLE");
     }
     return this.applyStatus(merchantTransactionId, { code: live.status === "PAID" ? "PAYMENT_SUCCESS" : "PAYMENT_ERROR", data: live }, signature, rawBody);
   }
@@ -305,21 +307,41 @@ const payload = {
         throw new AppError(data?.message || "Refund rejected by provider", 502, "PROVIDER_ERROR");
       }
       const refundId = data?.data?.merchantTransactionId || refundPayload.merchantTransactionId;
-      const full = already + input.amount >= payment.amount - 1e-9;
-      payment.status = full ? "REFUNDED" : "PARTIALLY_REFUNDED";
       payment.refundDetails = {
         refundId,
         amount: already + input.amount,
-        status: payment.status,
+        status: "REFUND_PENDING",
         initiatedAt: payment.refundDetails?.initiatedAt || new Date(),
-        completedAt: new Date(),
       };
       await payment.save();
-      return { refundId, status: "COMPLETED", amount: input.amount };
+      return { refundId, status: "PENDING", amount: input.amount };
     } catch (e: any) {
       if (e instanceof AppError) throw e;
       throw new AppError("Refund gateway unreachable", 502, "PROVIDER_UNREACHABLE");
     }
+  }
+
+  async confirmRefund(refundTransactionId: string): Promise<{ status: string }> {
+    await connectDB();
+    const payment: any = await Payment.findOne({ "refundDetails.refundId": refundTransactionId });
+    if (!payment) throw new AppError("Payment not found", 404, "NOT_FOUND");
+    if (payment.status === "REFUNDED" || payment.status === "PARTIALLY_REFUNDED") {
+      return { status: payment.status };
+    }
+    // Re-verify with provider status API using original transaction
+    const live = await this.getPaymentStatus(payment.merchantTransactionId);
+    if (live.status === "PAID") {
+      const full = (payment.refundDetails?.amount || 0) >= payment.amount - 1e-9;
+      payment.status = full ? "REFUNDED" : "PARTIALLY_REFUNDED";
+      payment.refundDetails = {
+        ...payment.refundDetails,
+        status: payment.status,
+        completedAt: new Date(),
+      };
+      await payment.save();
+      return { status: payment.status };
+    }
+    return { status: "REFUND_PENDING" };
   }
 
   async getPaymentStatus(merchantTransactionId: string): Promise<PaymentStatusResult> {

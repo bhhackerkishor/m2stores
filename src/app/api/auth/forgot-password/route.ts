@@ -31,7 +31,9 @@ export async function POST(request: NextRequest) {
     await user.save();
 
     logger.info("Password reset OTP sent", "auth", { identifier });
-    console.log(`🔑 Password reset OTP for ${identifier}: ${otp}`);
+    if (process.env.NODE_ENV !== "production") {
+      logger.info(`OTP for ${identifier}: ${otp}`, "auth-dev");
+    }
 
     return NextResponse.json(successResponse({ message: "Password reset OTP sent" }));
   } catch (error) {

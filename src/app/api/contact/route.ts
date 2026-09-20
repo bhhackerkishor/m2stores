@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 interface ContactBody {
   name?: string;
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
     };
 
-    console.log("[Contact Form Submission]", JSON.stringify(contactMessage, null, 2));
+    logger.info("Contact form submission", "contact", contactMessage);
 
     // TODO: Persist to database or send email notification
     // Example: await db.collection('contactMessages').insertOne(contactMessage);

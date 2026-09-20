@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (process.env.NODE_ENV === "production") {
       return NextResponse.json(successResponse({ message: "OTP sent successfully" }));
     }
-    console.log(`🔐 OTP for ${identifier}: ${otp}`);
+    logger.info(`OTP for ${identifier}: ${otp}`, "auth-dev");
     return NextResponse.json(successResponse({ message: "OTP sent successfully", otp }));
   } catch (error) {
     logger.error("Send OTP error", "auth", { error });

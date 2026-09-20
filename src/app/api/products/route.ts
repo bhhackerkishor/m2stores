@@ -37,7 +37,9 @@ export async function GET(request: NextRequest) {
       status: searchParams.get("status") || "PUBLISHED",
     });
 
-    return NextResponse.json(paginatedResponse(result.items, result.page, result.limit, result.total));
+    const response = NextResponse.json(paginatedResponse(result.items, result.page, result.limit, result.total));
+    response.headers.set("Cache-Control", "public, s-maxage=300, max-age=60, stale-while-revalidate=600");
+    return response;
   } catch (error) {
     logger.error("Get products error", "product", { error });
     return NextResponse.json(errorResponse("INTERNAL_ERROR", "Failed to fetch products"), { status: 500 });

@@ -37,6 +37,7 @@ const BannerSchema = new Schema<IBanner>(
 
 BannerSchema.index({ type: 1, isActive: 1 });
 BannerSchema.index({ ordering: 1 });
+BannerSchema.index({ isActive: 1, type: 1, ordering: 1, startDate: 1, expiryDate: 1 });
 
 export const Banner =
   (mongoose.models.Banner as mongoose.Model<IBanner> | undefined) ||

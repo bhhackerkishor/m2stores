@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "tsx src/scripts/test-all.ts",
     "seed": "tsx src/scripts/seed.ts",
     "test:inventory": "tsx src/scripts/test-inventory.ts",
     "test:cart": "tsx src/scripts/test-cart.ts",

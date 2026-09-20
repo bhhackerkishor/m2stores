@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
     if (activeOnly) filter.isActive = true;
 
     const categories = await Category.find(filter).sort({ sortOrder: 1, createdAt: -1 });
-    return NextResponse.json(successResponse(categories));
+    const response = NextResponse.json(successResponse(categories));
+    response.headers.set("Cache-Control", "public, s-maxage=600, max-age=120, stale-while-revalidate=3600");
+    return response;
   } catch (error) {
     logger.error("Get categories error", "category", { error });
     return NextResponse.json(errorResponse("INTERNAL_ERROR", "Failed to fetch categories"), { status: 500 });

@@ -8,9 +8,16 @@ import { cookies } from "next/headers";
 import { loginSchema } from "@/validators/auth";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = clientIp(request);
+    const ipLimit = checkRateLimit("otp-verify-ip", ip, LIMITS.otpVerify.limit, LIMITS.otpVerify.windowMs);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(errorResponse("RATE_LIMITED", "Too many verification attempts. Please try again later."), { status: 429 });
+    }
+
     const body = await request.json();
     const { identifier, otp, type } = body;
 

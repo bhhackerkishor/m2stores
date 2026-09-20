@@ -7,6 +7,7 @@ import { connectDB } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { AppError } from "@/lib/errors";
+import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
 
 const schema = z.object({
   orderNumber: z.string().min(1).max(64),
@@ -19,6 +20,12 @@ const schema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    const ip = clientIp(request);
+    const ipLimit = checkRateLimit("payments", ip, LIMITS.payments.limit, LIMITS.payments.windowMs);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(errorResponse("RATE_LIMITED", "Too many requests. Please try again shortly."), { status: 429 });
+    }
+
     const session = await getSessionFromCookie().catch(() => null);
     if (!session?.userId) return NextResponse.json(errorResponse("UNAUTHORIZED", "Login required"), { status: 401 });
     const body = await request.json();

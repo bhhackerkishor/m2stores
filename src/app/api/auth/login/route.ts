@@ -8,9 +8,16 @@ import { User } from "@/models/User";
 import { loginSchema } from "@/validators/auth";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = clientIp(request);
+    const ipLimit = checkRateLimit("auth-ip", ip, LIMITS.auth.limit, LIMITS.auth.windowMs);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(errorResponse("RATE_LIMITED", "Too many login attempts. Please try again later."), { status: 429 });
+    }
+
     const body = await request.json();
     const validation = loginSchema.safeParse(body);
 

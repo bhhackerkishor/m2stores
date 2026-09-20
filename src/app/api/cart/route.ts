@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = addToCartSchema.safeParse(body);
-    console.log(body);
     if (!parsed.success) {
       return NextResponse.json(errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Invalid input", parsed.error.flatten()), { status: 400 });
     }

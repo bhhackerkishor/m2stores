@@ -1,4 +1,5 @@
 import type { NotificationEvent } from "@/models/Notification";
+import { logger } from "@/lib/logger";
 
 export interface EmailPayload {
   to: string;
@@ -22,14 +23,14 @@ export interface SmsProvider {
 /** Dev/default: logs instead of spending SMS/email budget. Swap via env later. */
 class ConsoleEmailProvider implements EmailProvider {
   async send(payload: EmailPayload) {
-    console.log(`📧 [email] to=${payload.to} subject=${payload.subject}`);
+    logger.info("Email sent (console provider)", "notification", { to: payload.to, subject: payload.subject });
     return { sent: true, id: `log-${Date.now()}` };
   }
 }
 
 class ConsoleSmsProvider implements SmsProvider {
   async send(payload: SmsPayload) {
-    console.log(`📱 [sms] to=${payload.to} text=${payload.text.slice(0, 80)}`);
+    logger.info("SMS sent (console provider)", "notification", { to: payload.to, text: payload.text.slice(0, 80) });
     return { sent: true, id: `log-${Date.now()}` };
   }
 }

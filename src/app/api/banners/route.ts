@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
       ],
     };
     const banners = await Banner.find(filter).sort({ ordering: 1 }).limit(10).lean();
-    return NextResponse.json(successResponse(banners));
+    const response = NextResponse.json(successResponse(banners));
+    response.headers.set("Cache-Control", "public, s-maxage=300, max-age=60, stale-while-revalidate=600");
+    return response;
   } catch {
     return NextResponse.json(errorResponse("INTERNAL_ERROR", "Failed to load banners"), { status: 500 });
   }

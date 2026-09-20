@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
     // Return SUCCESS to acknowledge receipt to PhonePe
     return NextResponse.json({ code: "SUCCESS", ...result });
   } catch (error: any) {
-    const status = error?.statusCode === 401 ? 401 : error?.statusCode === 404 ? 404 : 500;
+    const statusCode = error?.statusCode || 500;
 
-    if (status === 401) {
+    if (statusCode === 401) {
       logger.error("Invalid PhonePe webhook signature", "payment", {
         xVerify: request.headers.get("x-verify"),
       });
@@ -35,11 +35,13 @@ export async function POST(request: NextRequest) {
       error: String(error?.message || error),
     });
 
-    // 404 indicates missing/unknown transaction (do not retry indefinitely)
-    // 500 signals PhonePe to retry delivering the webhook
-    return NextResponse.json(
-      { code: status === 404 ? "TRANSACTION_NOT_FOUND" : "INTERNAL_ERROR" },
-      { status }
-    );
+    // 404 = missing/unknown transaction (do not retry indefinitely)
+    // 503 = provider unreachable (PhonePe will retry)
+    // 500 = general failure (PhonePe will retry)
+    if (statusCode === 404) {
+      return NextResponse.json({ code: "TRANSACTION_NOT_FOUND" }, { status: 404 });
+    }
+    // Return 500/503 so PhonePe retries the webhook delivery
+    return NextResponse.json({ code: "INTERNAL_ERROR" }, { status: 500 });
   }
 }

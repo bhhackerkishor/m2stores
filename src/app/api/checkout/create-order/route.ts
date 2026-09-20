@@ -6,9 +6,21 @@ import { randomUUID } from "crypto";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { AppError } from "@/lib/errors";
+import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
+import { requireCsrf } from "@/lib/csrf";
 
 export async function POST(request: NextRequest) {
   try {
+    if (!requireCsrf(request)) {
+      return NextResponse.json(errorResponse("CSRF_INVALID", "Invalid or missing CSRF token"), { status: 403 });
+    }
+
+    const ip = clientIp(request);
+    const ipLimit = checkRateLimit("checkout", ip, LIMITS.checkout.limit, LIMITS.checkout.windowMs);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(errorResponse("RATE_LIMITED", "Too many requests. Please try again shortly."), { status: 429 });
+    }
+
     const session = await getSessionFromCookie().catch(() => null);
     if (!session?.userId) return NextResponse.json(errorResponse("UNAUTHORIZED", "Login required"), { status: 401 });
     const body = await request.json();
