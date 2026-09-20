@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { AppError } from "@/lib/errors";
 import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
+import { requireCsrf } from "@/lib/csrf";
 
 const schema = z.object({
   orderNumber: z.string().min(1).max(64),
@@ -20,6 +21,10 @@ const schema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!requireCsrf(request)) {
+      return NextResponse.json(errorResponse("CSRF_INVALID", "Invalid or missing CSRF token"), { status: 403 });
+    }
+
     const ip = clientIp(request);
     const ipLimit = checkRateLimit("payments", ip, LIMITS.payments.limit, LIMITS.payments.windowMs);
     if (!ipLimit.allowed) {

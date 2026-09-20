@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import SeoMetadataCard from "@/components/admin/SeoMetadataCard"; // Adjust import path
+import SeoMetadataCard from "@/components/admin/SeoMetadataCard";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,28 +33,96 @@ interface OptionItem {
   name: string;
   slug?: string;
 }
-interface IProductFormData {
-  name: string;
-  description: string;
-  images: string[];
-  seo: {
-    metaTitle: string;
-    metaDescription: string;
-    ogImage?: string;
-  };
+
+interface ProductImage {
+  url: string;
+  publicId: string;
+  alt: string;
+  isPrimary: boolean;
 }
 
-// Initial state template
+interface ProductVariant {
+  sku: string;
+  price: number;
+  salePrice?: number;
+  isActive: boolean;
+  attributes: Record<string, string>;
+}
+
+interface ProductSpecification {
+  group: string;
+  key: string;
+  value: string;
+}
+
+interface ProductSeo {
+  metaTitle: string;
+  metaDescription: string;
+  ogImage?: string;
+  keywords?: string[];
+}
+
+interface IProductFormData {
+  name: string;
+  slug: string;
+  description: string;
+  shortDescription: string;
+  categoryId: string;
+  subcategoryId: string;
+  brandId: string;
+  basePrice: number;
+  salePrice: number;
+  costPrice: number;
+  taxRate: number;
+  baseSKU: string;
+  hasVariants: boolean;
+  weight: number;
+  dimensions: { length: number; width: number; height: number };
+  warranty: string;
+  returnPolicyDays: number;
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
+  isFeatured: boolean;
+  isTrending: boolean;
+  isBestseller: boolean;
+  images: ProductImage[];
+  variants: ProductVariant[];
+  specifications: ProductSpecification[];
+  seo: ProductSeo;
+}
+
 const initialFormData: IProductFormData = {
   name: "",
+  slug: "",
   description: "",
+  shortDescription: "",
+  categoryId: "",
+  subcategoryId: "",
+  brandId: "",
+  basePrice: 0,
+  salePrice: 0,
+  costPrice: 0,
+  taxRate: 0,
+  baseSKU: "",
+  hasVariants: false,
+  weight: 0,
+  dimensions: { length: 0, width: 0, height: 0 },
+  warranty: "",
+  returnPolicyDays: 7,
+  status: "DRAFT",
+  isFeatured: false,
+  isTrending: false,
+  isBestseller: false,
   images: [],
+  variants: [],
+  specifications: [],
   seo: {
     metaTitle: "",
     metaDescription: "",
     ogImage: "",
+    keywords: [],
   },
 };
+
 export default function AdminProductNewPage() {
   const router = useRouter();
 
@@ -69,33 +137,7 @@ export default function AdminProductNewPage() {
   const [brands, setBrands] = useState<OptionItem[]>([]);
 
   // Form State
-  const [formData, setFormData] = useState<IProductFormData>({
-    name: "",
-    slug: "",
-    description: "",
-    shortDescription: "",
-    categoryId: "",
-    subcategoryId: "",
-    brandId: "",
-    basePrice: 0,
-    salePrice: 0,
-    costPrice: 0,
-    taxRate: 0,
-    baseSKU: "",
-    hasVariants: false,
-    weight: 0,
-    dimensions: { length: 0, width: 0, height: 0 },
-    warranty: "",
-    returnPolicyDays: 7,
-    status: "DRAFT",
-    isFeatured: false,
-    isTrending: false,
-    isBestseller: false,
-    images: [] as { url: string; publicId: string; alt: string; isPrimary: boolean }[],
-    variants: [] as { sku: string; price: number; salePrice?: number; isActive: boolean; attributes: Record<string, string> }[],
-    specifications: [] as { group: string; key: string; value: string }[],
-    seo: { metaTitle: "", metaDescription: "", keywords: [] as string[] },
-  });
+  const [formData, setFormData] = useState<IProductFormData>(initialFormData);
 
   // Fetch options (Categories, Brands) on mount
   useEffect(() => {
@@ -148,7 +190,7 @@ export default function AdminProductNewPage() {
   }, [formData.categoryId, allCategories]);
 
   // Form Field Handlers
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: keyof IProductFormData, value: any) => {
     setFormData((prev) => {
       const next = { ...prev, [field]: value };
       if (field === "name" && typeof value === "string" && !prev.slug) {
@@ -162,7 +204,7 @@ export default function AdminProductNewPage() {
     });
   };
 
- const handleSeoChange = (field: string, value: string) => {
+  const handleSeoChange = (field: keyof ProductSeo, value: any) => {
     setFormData((prev) => ({
       ...prev,
       seo: {
@@ -171,6 +213,7 @@ export default function AdminProductNewPage() {
       },
     }));
   };
+
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedCategory = e.target.value;
     setFormData((prev) => ({
@@ -191,7 +234,7 @@ export default function AdminProductNewPage() {
     }));
   };
 
-  const updateImage = (index: number, field: string, value: any) => {
+  const updateImage = (index: number, field: keyof ProductImage, value: any) => {
     setFormData((prev) => {
       const updated = [...prev.images];
       updated[index] = { ...updated[index], [field]: value };
@@ -222,7 +265,7 @@ export default function AdminProductNewPage() {
     }));
   };
 
-  const updateVariant = (index: number, field: string, value: any) => {
+  const updateVariant = (index: number, field: keyof ProductVariant, value: any) => {
     setFormData((prev) => {
       const updated = [...prev.variants];
       updated[index] = { ...updated[index], [field]: value };
@@ -245,7 +288,7 @@ export default function AdminProductNewPage() {
     }));
   };
 
-  const updateSpecification = (index: number, field: string, value: string) => {
+  const updateSpecification = (index: number, field: keyof ProductSpecification, value: string) => {
     setFormData((prev) => {
       const updated = [...prev.specifications];
       updated[index] = { ...updated[index], [field]: value };
@@ -327,7 +370,6 @@ export default function AdminProductNewPage() {
           >
             Cancel
           </Button>
-          {/* Enhanced Action Button */}
           <Button
             type="submit"
             disabled={saving}
@@ -683,7 +725,7 @@ export default function AdminProductNewPage() {
               <Label className="text-surface-700 dark:text-surface-300">Status</Label>
               <select
                 value={formData.status}
-                onChange={(e) => handleChange("status", e.target.value)}
+                onChange={(e) => handleChange("status", e.target.value as IProductFormData["status"])}
                 className="input w-full py-2"
               >
                 <option value="DRAFT">DRAFT</option>
@@ -849,10 +891,10 @@ export default function AdminProductNewPage() {
             </div>
           </Card>
           <SeoMetadataCard
-          formData={formData}
-          handleSeoChange={handleSeoChange}
-          siteUrl="https://yourstore.com"
-        />
+            formData={formData}
+            handleSeoChange={handleSeoChange}
+            siteUrl="https://yourstore.com"
+          />
         </div>
       </div>
     </form>
