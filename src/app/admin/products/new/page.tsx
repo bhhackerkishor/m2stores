@@ -891,7 +891,10 @@ export default function AdminProductNewPage() {
             </div>
           </Card>
           <SeoMetadataCard
-            formData={formData}
+            formData={{
+              ...formData,
+              images: formData.images.map((img) => img.url),
+            }}
             handleSeoChange={handleSeoChange}
             siteUrl="https://yourstore.com"
           />
