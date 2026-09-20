@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhonePe Integration Diagnostic Test</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 30px; background: #f8f9fa; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    button { background: #673ab7; color: white; border: none; padding: 10px 18px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; }
+    button:hover { background: #512da8; }
+    pre { background: #1e1e1e; color: #00ff66; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+    .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+    .pass { background: #d4edda; color: #155724; }
+    .fail { background: #f8d7da; color: #721c24; }
+  </style>
+</head>
+<body>
+
+  <h1>PhonePe PG Diagnostic Tool</h1>
+
+  <div class="card">
+    <h2>1. Environment Configuration</h2>
+    <button onclick="checkEnv()">Check Loaded .env Variables</button>
+    <div id="envResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Payment Initiation Test (/pg/v1/pay)</h2>
+    <button onclick="testInitiate()">Initiate ₹1 Test Payment</button>
+    <div id="initiateResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. Status API Verification (/pg/v1/status)</h2>
+    <input type="text" id="statusTxnId" placeholder="Enter Transaction ID" style="padding: 8px; width: 280px;" />
+    <button onclick="checkStatus()">Query Status</button>
+    <div id="statusResult"></div>
+  </div>
+
+  <script>
+    async function checkEnv() {
+      const res = await fetch('/api/test-env');
+      const data = await res.json();
+      document.getElementById('envResult').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    }
+
+    async function testInitiate() {
+      document.getElementById('initiateResult').innerHTML = '<p>Initiating request to PhonePe...</p>';
+      const res = await fetch('/api/test-initiate', { method: 'POST' });
+      const data = await res.json();
+
+      let html = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      if (data.redirectUrl) {
+        html += `<p><a href="${data.redirectUrl}" target="_blank"><button>Open PhonePe Pay Page</button></a></p>`;
+        document.getElementById('statusTxnId').value = data.merchantTransactionId;
+      }
+      document.getElementById('initiateResult').innerHTML = html;
+    }
+
+    async function checkStatus() {
+      const txnId = document.getElementById('statusTxnId').value;
+      if (!txnId) return alert('Please enter a Transaction ID');
+      
+      document.getElementById('statusResult').innerHTML = '<p>Fetching status from PhonePe...</p>';
+      const res = await fetch(`/api/test-status/${txnId}`);
+      const data = await res.json();
+      document.getElementById('statusResult').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    }
+  </script>
+
+</body>
+</html>

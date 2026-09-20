@@ -1,0 +1,484 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { Invoice } from "@/components/orders/Invoice";
+import { formatPrice } from "@/lib/utils";
+import { timelineFor, customerCanCancel } from "@/services/order-status";
+import { 
+  Printer, 
+  XCircle, 
+  Package, 
+  MapPin, 
+  CreditCard, 
+  AlertTriangle,
+  ChevronLeft,
+  Truck,
+  ShieldCheck,
+  RotateCcw,
+  Zap,
+  Headphones
+} from "lucide-react";
+import Link from "next/link";
+
+export function OrderDetailClient({ order }: { order: any }) {
+  const router = useRouter();
+  const [reason, setReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [error, setError] = useState("");
+  const [showCancel, setShowCancel] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [showTicket, setShowTicket] = useState(false);
+  const [ticketForm, setTicketForm] = useState({ subject: "", category: "ORDER_ISSUE", message: "" });
+  const [ticketBusy, setTicketBusy] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState(false);
+
+  const tl = timelineFor(order.orderStatus, order.statusHistory || []);
+  const cancellable = customerCanCancel(order.orderStatus);
+  const needsPayment = order.orderStatus === "PENDING_PAYMENT" || (order.paymentInfo?.status !== "PAID" && order.paymentInfo?.status !== "CREATED");
+  const isCOD = order.paymentInfo?.method === "COD";
+
+  const handlePayNow = async () => {
+    setPaying(true);
+    setError("");
+    try {
+      const res = await fetch("/api/payments/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderNumber: order.orderNumber }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error?.message || "Payment initiation failed");
+        return;
+      }
+      if (data.data?.redirectUrl) {
+        window.location.href = data.data.redirectUrl;
+      }
+    } catch {
+      setError("Failed to initiate payment. Please try again.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handleCreateTicket = async () => {
+    if (ticketForm.subject.length < 5 || ticketForm.message.length < 10) {
+      setError("Please fill in subject (min 5 chars) and message (min 10 chars).");
+      return;
+    }
+    setTicketBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...ticketForm,
+          subject: `[${order.orderNumber}] ${ticketForm.subject}`,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error?.message || "Failed to create ticket");
+        return;
+      }
+      setTicketSuccess(true);
+      setShowTicket(false);
+    } catch {
+      setError("Failed to create ticket");
+    } finally {
+      setTicketBusy(false);
+    }
+  };
+
+  const cancel = async () => {
+    if (!reason.trim()) {
+      setError("Please select or enter a cancellation reason.");
+      return;
+    }
+    setCancelling(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/orders/${order.orderNumber}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error?.message || "Cancellation failed");
+        return;
+      }
+      setShowCancel(false);
+      router.refresh();
+    } catch {
+      setError("An unexpected error occurred.");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="min-h-screen bg-surface-50/50 pb-16">
+      {/* Printable Area Target Class */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-invoice, #printable-invoice * {
+            visibility: visible;
+          }
+          #printable-invoice {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 20px;
+            box-shadow: none !important;
+            border: none !important;
+          }
+        }
+      `}</style>
+
+      {/* Screen-Only Container */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 print:hidden">
+        {/* Navigation Breadcrumb */}
+        <Link 
+          href="/orders" 
+          className="inline-flex items-center text-xs font-semibold text-surface-500 hover:text-blue-600 transition-colors mb-6"
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" /> Back to My Orders
+        </Link>
+
+        {/* Top Header Card */}
+        <Card className="p-6 mb-8 border-surface-200/80 shadow-sm bg-white rounded-2xl">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-black text-surface-900 tracking-tight font-mono">
+                  #{order.orderNumber}
+                </h1>
+                <span className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border ${
+                  order.orderStatus === "DELIVERED"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : order.orderStatus === "CANCELLED"
+                    ? "bg-red-50 text-red-700 border-red-200"
+                    : "bg-blue-50 text-blue-700 border-blue-200"
+                }`}>
+                  {order.orderStatus}
+                </span>
+              </div>
+              <p className="text-xs text-surface-500 mt-1">
+                Placed on {new Date(order.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handlePrint}
+                className="border-surface-300 font-semibold text-surface-700 hover:bg-surface-50"
+              >
+                <Printer className="w-4 h-4 mr-2" /> Print Invoice
+              </Button>
+
+              {cancellable && (
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowCancel(true)}
+                  className="font-semibold shadow-sm"
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Cancel Order
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Error Feedback */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-red-600" />
+            {error}
+          </div>
+        )}
+
+        {/* Main Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Left Column (2/3) */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* Flipkart-Style Animated Timeline */}
+            <Card className="p-6 md:p-8 border-surface-200/80 shadow-sm rounded-2xl bg-white">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-surface-100">
+                <div className="flex items-center gap-2">
+                  <Truck className="w-5 h-5 text-blue-600" />
+                  <h2 className="font-bold text-surface-900">Delivery Status</h2>
+                </div>
+                {order.shippingDetails?.trackingNumber && (
+                  <span className="text-xs font-semibold text-surface-500">
+                    AWB: <span className="font-mono text-surface-900">{order.shippingDetails.trackingNumber}</span> ({order.shippingDetails.courier})
+                  </span>
+                )}
+              </div>
+
+              <OrderTimeline placedAt={tl.placedAt} steps={tl.steps} terminal={tl.terminal} />
+            </Card>
+
+            {/* Item Breakdown List */}
+            <Card className="p-6 md:p-8 border-surface-200/80 shadow-sm rounded-2xl bg-white">
+              <div className="flex items-center gap-2 mb-6 pb-4 border-b border-surface-100">
+                <Package className="w-5 h-5 text-blue-600" />
+                <h2 className="font-bold text-surface-900">Order Items ({order.items?.length || 0})</h2>
+              </div>
+
+              <div className="divide-y divide-surface-100">
+                {(order.items || []).map((it: any, i: number) => (
+                  <div key={i} className="py-4 first:pt-0 last:pb-0 flex gap-4 items-center">
+                    <div className="w-20 h-20 bg-surface-100 rounded-xl overflow-hidden shrink-0 border border-surface-200 relative">
+                      <Image 
+                        src={it.imageSnapshot || "https://via.placeholder.com/80x80"} 
+                        alt={it.nameSnapshot} 
+                        fill 
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-surface-900 text-sm truncate">{it.nameSnapshot}</h4>
+                      <p className="text-xs text-surface-500 font-mono mt-1">SKU: {it.sku}</p>
+                      <span className="inline-block mt-2 text-xs font-bold px-2 py-0.5 bg-surface-100 text-surface-700 rounded">
+                        Qty: {it.quantity}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-surface-900 text-base">{formatPrice(it.finalLineTotal)}</p>
+                      <p className="text-xs text-surface-400 mt-0.5">{formatPrice(it.salePrice)} each</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Embedded Invoice Section */}
+            <div>
+              <Invoice order={order} />
+            </div>
+          </div>
+
+          {/* Right Column Sidebar (1/3) */}
+          <div className="space-y-6">
+            
+            {/* Delivery Address */}
+            <Card className="p-6 border-surface-200/80 shadow-sm rounded-2xl bg-white">
+              <div className="flex items-center gap-2 mb-4 text-surface-900 font-bold border-b border-surface-100 pb-3">
+                <MapPin className="w-4 h-4 text-blue-600" />
+                Shipping Destination
+              </div>
+              <p className="font-bold text-surface-900 text-sm">{order.shippingAddress?.fullName}</p>
+              <p className="text-sm text-surface-600 mt-1 leading-relaxed">
+                {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city} - {order.shippingAddress?.pincode}
+              </p>
+              <p className="text-xs text-surface-500 font-medium mt-3 pt-3 border-t border-surface-100">
+                Phone: {order.shippingAddress?.phone}
+              </p>
+            </Card>
+
+            {/* Payment Summary */}
+            <Card className="p-6 border-surface-200/80 shadow-sm rounded-2xl bg-white">
+              <div className="flex items-center gap-2 mb-4 text-surface-900 font-bold border-b border-surface-100 pb-3">
+                <CreditCard className="w-4 h-4 text-blue-600" />
+                Payment Info
+              </div>
+              <div className="flex justify-between items-center text-sm mb-2">
+                <span className="text-surface-500">Method</span>
+                <span className="font-semibold text-surface-900 uppercase">{order.paymentInfo?.method}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm mb-2">
+                <span className="text-surface-500">Status</span>
+                <span className={`font-bold uppercase text-xs px-2 py-0.5 rounded ${
+                  order.paymentInfo?.status === "PAID" ? "text-emerald-700 bg-emerald-50" : "text-amber-700 bg-amber-50"
+                }`}>
+                  {order.paymentInfo?.status}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-surface-100 mt-3">
+                <span className="font-bold text-surface-900">Total</span>
+                <span className="font-black text-lg text-blue-600">
+                  {formatPrice(order.pricingSnapshot?.grandTotal || 0)}
+                </span>
+              </div>
+
+              {/* Pay Now button for pending/failed payments */}
+              {needsPayment && (
+                <div className="mt-4 pt-3 border-t border-surface-100">
+                  {isCOD ? (
+                    <>
+                      <p className="text-xs text-surface-500 mb-2">Want to pay online now? Upgrade to PhonePe for faster processing.</p>
+                      <Button onClick={handlePayNow} isLoading={paying} className="w-full" size="sm">
+                        <Zap className="w-4 h-4 mr-2" /> Pay with PhonePe
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-surface-500 mb-2">Your payment is pending. Complete payment to confirm your order.</p>
+                      <Button onClick={handlePayNow} isLoading={paying} className="w-full" size="sm">
+                        <Zap className="w-4 h-4 mr-2" /> Pay Now
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
+            </Card>
+
+            {/* Raise Ticket Card */}
+            {order.orderStatus !== "CANCELLED" && (
+              <Card className="p-6 border-surface-200/80 shadow-sm rounded-2xl bg-white">
+                <div className="flex items-center gap-2 mb-3">
+                  <Headphones className="w-4 h-4 text-blue-600" />
+                  <h3 className="font-bold text-surface-900">Need Help?</h3>
+                </div>
+                {ticketSuccess ? (
+                  <div className="p-3 bg-accent-50 dark:bg-accent-950/30 rounded-lg text-sm text-accent-700 dark:text-accent-300">
+                    Support ticket created. Our team will respond within 24 hours.
+                  </div>
+                ) : showTicket ? (
+                  <div className="space-y-3">
+                    <Input
+                      value={ticketForm.subject}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTicketForm((f) => ({ ...f, subject: e.target.value }))}
+                      placeholder="Brief subject (min 5 chars)"
+                    />
+                    <select
+                      value={ticketForm.category}
+                      onChange={(e) => setTicketForm((f) => ({ ...f, category: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-700 text-sm bg-white dark:bg-surface-800"
+                      aria-label="Ticket category"
+                    >
+                      <option value="ORDER_ISSUE">Order Issue</option>
+                      <option value="PAYMENT_ISSUE">Payment Issue</option>
+                      <option value="SHIPPING_ISSUE">Shipping Issue</option>
+                      <option value="PRODUCT_QUALITY">Product Quality</option>
+                      <option value="RETURNS">Returns</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                    <textarea
+                      value={ticketForm.message}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setTicketForm((f) => ({ ...f, message: e.target.value }))}
+                      placeholder="Describe your issue in detail..."
+                      className="w-full px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-700 text-sm h-24 resize-none bg-white dark:bg-surface-800"
+                    />
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setShowTicket(false)}>Cancel</Button>
+                      <Button size="sm" onClick={handleCreateTicket} isLoading={ticketBusy}>Submit</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setShowTicket(true)}>
+                    <Headphones className="w-4 h-4 mr-2" /> Raise a Ticket
+                  </Button>
+                )}
+              </Card>
+            )}
+
+            {/* Cancellation Status if active */}
+            {order.cancellation && (
+              <Card className="p-6 border-red-200 bg-red-50/50 shadow-sm rounded-2xl">
+                <div className="flex items-center gap-2 text-red-900 font-bold mb-2">
+                  <RotateCcw className="w-4 h-4 text-red-600" />
+                  Order Cancelled
+                </div>
+                <p className="text-xs text-red-700"><strong>Reason:</strong> {order.cancellation.reason}</p>
+                {order.cancellation.refundStatus && (
+                  <p className="text-xs text-red-600 mt-2 font-semibold bg-white p-2 rounded-lg border border-red-200">
+                    Refund Status: {order.cancellation.refundStatus}
+                  </p>
+                )}
+              </Card>
+            )}
+
+            {/* Customer Assurance Widget */}
+            <Card className="p-4 bg-surface-100/50 border-none rounded-2xl space-y-3">
+              <div className="flex items-center gap-3 text-xs text-surface-600 font-medium">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>100% Genuine Products & Secure Payments</span>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Cancellation Modal Dialog */}
+      {showCancel && cancellable && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md p-6 bg-white rounded-2xl shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-surface-900 text-lg">Cancel Order</h3>
+                <p className="text-xs text-surface-500">Order #{order.orderNumber}</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-surface-600">
+              Please let us know why you are cancelling this order:
+            </p>
+
+            <div className="space-y-2">
+              {["Ordered by mistake", "Found a better price elsewhere", "Delayed delivery time", "Need to change shipping address"].map((preset) => (
+                <button
+                  key={preset}
+                  onClick={() => setReason(preset)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+                    reason === preset ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-surface-200 text-surface-600 hover:bg-surface-50"
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+
+            <Input 
+              value={reason} 
+              onChange={(e) => setReason(e.target.value)} 
+              placeholder="Or write custom reason..." 
+              className="text-xs mt-2"
+            />
+
+            <p className="text-[11px] text-surface-400">
+              Refunds for online paid orders will be initiated immediately back to the original payment source.
+            </p>
+
+            <div className="flex gap-2 justify-end pt-2 border-t border-surface-100">
+              <Button variant="ghost" onClick={() => setShowCancel(false)} size="sm">
+                Keep Order
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={cancel} 
+                disabled={cancelling}
+                size="sm"
+              >
+                {cancelling ? "Processing..." : "Confirm Cancellation"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}

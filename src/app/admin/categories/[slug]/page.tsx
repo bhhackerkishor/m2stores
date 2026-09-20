@@ -1,0 +1,354 @@
+"use client";
+
+import { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Plus, Trash2 } from "lucide-react";
+
+interface AttributeRow {
+  name: string;
+  type: "TEXT" | "SELECT" | "NUMBER";
+  options: string;
+  isFilterable: boolean;
+}
+
+export default function AdminCategoryEditPage({ params }: { params: Promise<{ slug: string }> }) {
+  const router = useRouter();
+  const { slug } = use(params);
+
+  const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const [form, setForm] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    image: "",
+    parentCategoryId: "",
+    sortOrder: "0",
+    isActive: true,
+  });
+
+  const [attributes, setAttributes] = useState<AttributeRow[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/categories?active=false").then((r) => r.json()),
+      fetch(`/api/categories/${slug}`).then((r) => r.json()),
+    ])
+      .then(([allCategories, currentCategory]) => {
+        if (allCategories.success) {
+          setCategories(allCategories.data.filter((c: any) => c.slug !== slug));
+        }
+
+        if (currentCategory.success) {
+          const c = currentCategory.data;
+          setForm({
+            name: c.name || "",
+            slug: c.slug || "",
+            description: c.description || "",
+            image: c.image || "",
+            parentCategoryId: c.parentCategoryId?._id || c.parentCategoryId || "",
+            sortOrder: c.sortOrder?.toString() || "0",
+            isActive: c.isActive ?? true,
+          });
+
+          if (c.attributes && Array.isArray(c.attributes)) {
+            setAttributes(
+              c.attributes.map((attr: any) => ({
+                name: attr.name || "",
+                type: attr.type || "TEXT",
+                options: Array.isArray(attr.options) ? attr.options.join(", ") : "",
+                isFilterable: !!attr.isFilterable,
+              }))
+            );
+          }
+        } else {
+          setError("Category not found");
+        }
+      })
+      .catch(() => setError("Failed to load category data"))
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  const set = (k: string, v: string | boolean) => {
+    setForm((f) => ({ ...f, [k]: v }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+
+    try {
+      const formattedAttributes = attributes
+        .filter((a) => a.name.trim() !== "")
+        .map((a) => ({
+          name: a.name.trim(),
+          type: a.type,
+          options:
+            a.type === "SELECT"
+              ? a.options
+                  .split(",")
+                  .map((opt) => opt.trim())
+                  .filter(Boolean)
+              : [],
+          isFilterable: a.isFilterable,
+        }));
+
+      const payload = {
+        name: form.name,
+        slug: form.slug.toLowerCase(),
+        description: form.description || undefined,
+        image: form.image || undefined,
+        parentCategoryId: form.parentCategoryId || undefined,
+        isActive: form.isActive,
+        sortOrder: parseInt(form.sortOrder, 10) || 0,
+        attributes: formattedAttributes,
+      };
+      console.log(payload)
+      const res = await fetch(`/api/categories/${slug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        setError(data.error?.message || "Failed to update category");
+        return;
+      }
+
+      router.push("/admin/categories");
+    } catch (e) {
+      setError("Failed to update category");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center text-surface-500">Loading category details...</div>;
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-surface-900">Edit Category</h1>
+        <Button onClick={() => router.push("/admin/categories")} variant="ghost">
+          Cancel
+        </Button>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <h2 className="text-xl font-semibold text-surface-900 mb-4">Basic Information</h2>
+            <div className="space-y-4">
+              <div>
+                <Label>Category Name *</Label>
+                <Input
+                  value={form.name}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("name", e.target.value)}
+                  placeholder="Category Name"
+                />
+              </div>
+
+              <div>
+                <Label>Slug *</Label>
+                <Input
+                  value={form.slug}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("slug", e.target.value)}
+                  placeholder="category-slug"
+                />
+              </div>
+
+              <div>
+                <Label>Parent Category</Label>
+                <select
+                  value={form.parentCategoryId}
+                  onChange={(e) => set("parentCategoryId", e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-surface-200 bg-white text-sm"
+                >
+                  <option value="">None (Top Level Category)</option>
+                  {categories.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label>Image URL</Label>
+                <Input
+                  value={form.image}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("image", e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+
+              <div>
+                <Label>Description</Label>
+                <textarea
+                  value={form.description}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("description", e.target.value)}
+                  placeholder="Enter description..."
+                  className="w-full px-4 py-2.5 rounded-lg border border-surface-200 bg-white h-32 text-sm"
+                  maxLength={1000}
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-surface-900">Category Attributes</h2>
+                <p className="text-xs text-surface-500 mt-0.5">
+                  Define technical attributes that products in this category should support.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setAttributes((a) => [
+                    ...a,
+                    { name: "", type: "TEXT", options: "", isFilterable: false },
+                  ])
+                }
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add Attribute
+              </Button>
+            </div>
+
+            {attributes.length > 0 ? (
+              <div className="space-y-4">
+                {attributes.map((attr, i) => (
+                  <div key={i} className="p-4 bg-surface-50 border border-surface-200 rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-xs">Attribute Name</Label>
+                        <Input
+                          placeholder="e.g. Storage, Size"
+                          value={attr.name}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setAttributes((arr) =>
+                              arr.map((x, j) => (j === i ? { ...x, name: e.target.value } : x))
+                            )
+                          }
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Type</Label>
+                        <select
+                          value={attr.type}
+                          onChange={(e) =>
+                            setAttributes((arr) =>
+                              arr.map((x, j) =>
+                                j === i
+                                  ? { ...x, type: e.target.value as "TEXT" | "SELECT" | "NUMBER" }
+                                  : x
+                              )
+                            )
+                          }
+                          className="w-full px-3 py-2.5 rounded-lg border border-surface-200 bg-white text-sm"
+                        >
+                          <option value="TEXT">TEXT</option>
+                          <option value="SELECT">SELECT</option>
+                          <option value="NUMBER">NUMBER</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end justify-between">
+                        <label className="flex items-center gap-2 text-sm text-surface-700 pb-2.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={attr.isFilterable}
+                            onChange={(e) =>
+                              setAttributes((arr) =>
+                                arr.map((x, j) => (j === i ? { ...x, isFilterable: e.target.checked } : x))
+                              )
+                            }
+                            className="rounded border-surface-300"
+                          />
+                          Is Filterable
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setAttributes((arr) => arr.filter((_, j) => j !== i))}
+                          className="text-red-600 hover:text-red-700 p-2 pb-2.5"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {attr.type === "SELECT" && (
+                      <div>
+                        <Label className="text-xs">Options (Comma separated)</Label>
+                        <Input
+                          placeholder="e.g. Red, Blue, Green"
+                          value={attr.options}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            setAttributes((arr) =>
+                              arr.map((x, j) => (j === i ? { ...x, options: e.target.value } : x))
+                            )
+                          }
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-surface-500 italic">No custom attributes defined.</p>
+            )}
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <h2 className="text-xl font-semibold text-surface-900 mb-4">Status & Visibility</h2>
+            <div className="space-y-4 mb-6">
+              <label className="flex items-center gap-3 text-sm font-medium text-surface-900 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.isActive}
+                  onChange={(e) => set("isActive", e.target.checked)}
+                  className="w-4 h-4 rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+                />
+                Active (Visible on store)
+              </label>
+
+              <div>
+                <Label>Sort Order</Label>
+                <Input
+                  type="number"
+                  value={form.sortOrder}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("sortOrder", e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <Button className="w-full" size="lg" onClick={handleSave} disabled={saving}>
+              {saving ? "Updating..." : "Update Category"}
+            </Button>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
