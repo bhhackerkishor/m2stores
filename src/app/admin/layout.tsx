@@ -9,7 +9,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-surface-100 flex flex-col">
+    <div className="min-h-screen bg-surface-100 dark:bg-surface-950 text-surface-900 dark:text-surface-100 flex flex-col transition-colors duration-200">
       <AdminSidebar
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
@@ -24,7 +24,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         }`}
       >
         <AdminTopNav onMobileMenuToggle={() => setIsMobileOpen(true)} />
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">{children}</div>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden dark:bg-surface-950">{children}</main>
       </div>
     </div>
   );

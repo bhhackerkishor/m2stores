@@ -19,6 +19,7 @@ import {
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { SearchAutocomplete } from "@/components/storefront/SearchAutocomplete";
 import { FadeIn } from "@/components/shared/FadeIn";
+import BannerCarousel from "@/components/home/BannerCarousel";
 import { CatalogService } from "@/services/catalog.service";
 import { OfferService } from "@/services/offer.service";
 import { Banner } from "@/models/Banner";
@@ -69,7 +70,10 @@ export default async function HomePage() {
     Banner.find({
       isActive: true,
       type: "HERO",
-      $or: [{ startDate: {$exists: false } }, { startDate: { $lte: currentDate } }],$or: [{ expiryDate: { $exists: false } }, { expiryDate: {$gte: currentDate } }],
+      $and: [
+        { $or: [{ startDate: { $exists: false } }, { startDate: { $lte: currentDate } }] },
+        { $or: [{ expiryDate: { $exists: false } }, { expiryDate: { $gte: currentDate } }] },
+      ],
     })
       .sort({ ordering: 1 })
       .limit(3)
@@ -78,7 +82,10 @@ export default async function HomePage() {
     Banner.find({
       isActive: true,
       type: "PROMOTIONAL",
-      $or: [{ startDate: {$exists: false } }, { startDate: { $lte: currentDate } }],$or: [{ expiryDate: { $exists: false } }, { expiryDate: {$gte: currentDate } }],
+      $and: [
+    { $or: [{ startDate: { $exists: false } }, { startDate: { $lte: currentDate } }] },
+    { $or: [{ expiryDate: { $exists: false } }, { expiryDate: { $gte: currentDate } }] },
+  ],
     })
       .sort({ ordering: 1 })
       .limit(2)
@@ -206,6 +213,9 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Dynamic Banner Carousel */}
+      <BannerCarousel />
 
       {/* Brand Value Pillars */}
       <section className="bg-white dark:bg-surface-900 border-y border-surface-200/80 dark:border-surface-800 py-8 shadow-sm">

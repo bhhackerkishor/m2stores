@@ -9,6 +9,7 @@ import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { Invoice } from "@/components/orders/Invoice";
 import { timelineFor, allowedNext, adminAllowedStatuses, describeStatus } from "@/services/order-status";
 import { formatPrice } from "@/lib/utils";
+import { CheckCircle, CreditCard, RotateCcw } from "lucide-react";
 
 export function AdminOrderDetailClient({ order, payment }: { order: any; payment: any }) {
   const router = useRouter();
@@ -18,7 +19,18 @@ export function AdminOrderDetailClient({ order, payment }: { order: any; payment
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refundBusy, setRefundBusy] = useState(false);
+  const [refundError, setRefundError] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState("");
   const tl = timelineFor(order.orderStatus, order.statusHistory || []);
+
+  const canApproveCancellation = ["CONFIRMED", "PROCESSING", "PENDING_PAYMENT"].includes(order.orderStatus);
+  const canInitiateRefund = ["CANCELLED", "DELIVERED"].includes(order.orderStatus) && payment?.status === "PAID";
+  const canMarkRefunded = order.orderStatus === "REFUND_PENDING";
 
   const submit = async () => {
     if (!to) {
@@ -41,6 +53,85 @@ export function AdminOrderDetailClient({ order, payment }: { order: any; payment
       router.refresh();
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleApproveCancellation = async () => {
+    if (!cancelReason.trim()) {
+      setCancelError("Cancellation reason is required");
+      return;
+    }
+    setCancelBusy(true);
+    setCancelError("");
+    try {
+      const res = await fetch(`/api/admin/orders/${order.orderNumber}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: "CANCELLED", notes: cancelReason }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setCancelError(data.error?.message || "Cancellation failed");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setCancelError("Failed to cancel order");
+    } finally {
+      setCancelBusy(false);
+    }
+  };
+
+  const handleInitiateRefund = async () => {
+    const amount = refundAmount ? parseFloat(refundAmount) : undefined;
+    if (!refundReason.trim()) {
+      setRefundError("Refund reason is required");
+      return;
+    }
+    if (amount !== undefined && (isNaN(amount) || amount <= 0)) {
+      setRefundError("Invalid refund amount");
+      return;
+    }
+    setRefundBusy(true);
+    setRefundError("");
+    try {
+      const res = await fetch(`/api/admin/orders/${order.orderNumber}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, reason: refundReason }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setRefundError(data.error?.message || "Refund failed");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setRefundError("Failed to initiate refund");
+    } finally {
+      setRefundBusy(false);
+    }
+  };
+
+  const handleMarkRefunded = async () => {
+    setRefundBusy(true);
+    setRefundError("");
+    try {
+      const res = await fetch(`/api/admin/orders/${order.orderNumber}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: "REFUNDED", notes: "Refund confirmed by admin" }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setRefundError(data.error?.message || "Update failed");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setRefundError("Failed to mark as refunded");
+    } finally {
+      setRefundBusy(false);
     }
   };
 
@@ -87,6 +178,67 @@ export function AdminOrderDetailClient({ order, payment }: { order: any; payment
             <Button className="w-full" onClick={submit} isLoading={busy}>Apply Transition</Button>
             <p className="text-xs text-surface-500 mt-2">Cancelling releases reserved stock or restocks committed lines + refunds captured payments. All actions audit-logged.</p>
           </Card>
+
+          {/* Quick Actions: Cancel / Refund */}
+          {(canApproveCancellation || canInitiateRefund || canMarkRefunded) && (
+            <Card>
+              <h3 className="font-semibold mb-3">Quick Actions</h3>
+              {canApproveCancellation && (
+                <div className="space-y-2 mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm font-medium text-red-800 flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4" /> Approve Cancellation
+                  </p>
+                  <Input
+                    value={cancelReason}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCancelReason(e.target.value)}
+                    placeholder="Cancellation reason"
+                    className="mb-2"
+                  />
+                  {cancelError && <p className="text-xs text-red-600">{cancelError}</p>}
+                  <Button variant="destructive" size="sm" className="w-full" onClick={handleApproveCancellation} isLoading={cancelBusy}>
+                    Confirm Cancellation
+                  </Button>
+                </div>
+              )}
+              {canInitiateRefund && (
+                <div className="space-y-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm font-medium text-amber-800 flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4" /> Initiate Refund
+                  </p>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={refundAmount}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRefundAmount(e.target.value)}
+                    placeholder={`Max: ${formatPrice(order.pricingSnapshot?.grandTotal || 0)}`}
+                    className="mb-2"
+                  />
+                  <Input
+                    value={refundReason}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRefundReason(e.target.value)}
+                    placeholder="Refund reason"
+                    className="mb-2"
+                  />
+                  {refundError && <p className="text-xs text-red-600">{refundError}</p>}
+                  <Button variant="outline" size="sm" className="w-full" onClick={handleInitiateRefund} isLoading={refundBusy}>
+                    Process Refund
+                  </Button>
+                </div>
+              )}
+              {canMarkRefunded && (
+                <div className="space-y-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm font-medium text-green-800 flex items-center gap-1.5">
+                    <RotateCcw className="w-4 h-4" /> Mark as Refunded
+                  </p>
+                  <p className="text-xs text-green-700">Refund has been processed externally. Mark this order as fully refunded.</p>
+                  {refundError && <p className="text-xs text-red-600">{refundError}</p>}
+                  <Button variant="outline" size="sm" className="w-full" onClick={handleMarkRefunded} isLoading={refundBusy}>
+                    Confirm Refund Complete
+                  </Button>
+                </div>
+              )}
+            </Card>
+          )}
           <Card>
             <h3 className="font-semibold mb-2">Customer</h3>
             <p className="text-sm font-mono">{String(order.userId)}</p>

@@ -6,18 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+
+interface Category {
+  _id: string;
+  name: string;
+  level?: number;
+}
 
 interface AttributeRow {
   name: string;
   type: "TEXT" | "SELECT" | "NUMBER";
-  options: string; // Comma-separated string in form state
+  options: string;
   isFilterable: boolean;
 }
 
 export default function AdminCategoryNewPage() {
   const router = useRouter();
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,24 +36,32 @@ export default function AdminCategoryNewPage() {
     parentCategoryId: "",
     sortOrder: "0",
     isActive: true,
-    level:"0",
+    level: 0,
   });
 
   const [attributes, setAttributes] = useState<AttributeRow[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
     fetch("/api/categories")
       .then((r) => r.json())
       .then((res) => {
-        if (res.success) setCategories(res.data);
+        if (isMounted && res.success) {
+          setCategories(res.data);
+        }
       })
-      .catch(() => setError("Failed to fetch categories"));
-      console.log(categories);
-  }, [categories]);
+      .catch(() => {
+        if (isMounted) setError("Failed to fetch categories");
+      });
 
-  const set = (k: string, v: string | boolean) => {
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const set = (k: string, v: string | boolean | number) => {
     setForm((f) => {
-      const next: any = { ...f, [k]: v };
+      const next = { ...f, [k]: v };
       if (k === "name" && typeof v === "string" && !f.slug) {
         next.slug = v
           .toLowerCase()
@@ -59,6 +74,11 @@ export default function AdminCategoryNewPage() {
   };
 
   const handleSave = async () => {
+    if (!form.name.trim() || !form.slug.trim()) {
+      setError("Category Name and Slug are required.");
+      return;
+    }
+
     setSaving(true);
     setError("");
 
@@ -78,17 +98,16 @@ export default function AdminCategoryNewPage() {
           isFilterable: a.isFilterable,
         }));
 
-
       const payload = {
-        name: form.name,
-        slug: form.slug.toLowerCase(),
-        description: form.description || undefined,
-        image: form.image || undefined,
+        name: form.name.trim(),
+        slug: form.slug.toLowerCase().trim(),
+        description: form.description.trim() || undefined,
+        image: form.image.trim() || undefined,
         parentCategoryId: form.parentCategoryId || undefined,
         isActive: form.isActive,
         sortOrder: parseInt(form.sortOrder, 10) || 0,
         attributes: formattedAttributes,
-        level:form.level,
+        level: Number(form.level) || 0,
       };
 
       const res = await fetch("/api/categories", {
@@ -105,7 +124,7 @@ export default function AdminCategoryNewPage() {
       }
 
       router.push("/admin/categories");
-    } catch (e) {
+    } catch {
       setError("Failed to create category");
     } finally {
       setSaving(false);
@@ -115,14 +134,22 @@ export default function AdminCategoryNewPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-surface-900">New Category</h1>
+        <div>
+          <Link
+            href="/admin/categories"
+            className="inline-flex items-center text-sm text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100 mb-2 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back to Categories
+          </Link>
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-100">New Category</h1>
+        </div>
         <Button onClick={() => router.push("/admin/categories")} variant="ghost">
           Cancel
         </Button>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg text-red-700 dark:text-red-300 text-sm">
           {error}
         </div>
       )}
@@ -130,33 +157,43 @@ export default function AdminCategoryNewPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Section - Primary Information */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <h2 className="text-xl font-semibold text-surface-900 mb-4">Basic Information</h2>
+          <Card className="bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 p-6">
+            <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-100 mb-4">Basic Information</h2>
             <div className="space-y-4">
               <div>
-                <Label>Category Name *</Label>
+                <Label className="text-surface-900 dark:text-surface-200">Category Name *</Label>
                 <Input
                   value={form.name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("name", e.target.value)}
+                  onChange={(e) => set("name", e.target.value)}
                   placeholder="e.g. Footwear, Smartphones"
                 />
               </div>
 
               <div>
-                <Label>Slug *</Label>
+                <Label className="text-surface-900 dark:text-surface-200">Slug *</Label>
                 <Input
                   value={form.slug}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("slug", e.target.value)}
+                  onChange={(e) => set("slug", e.target.value)}
                   placeholder="category-slug"
                 />
               </div>
 
               <div>
-                <Label>Parent Category</Label>
+                <Label className="text-surface-900 dark:text-surface-200">Parent Category</Label>
                 <select
                   value={form.parentCategoryId}
-                  onChange={(e) => set("parentCategoryId", e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border border-surface-200 bg-white text-sm"
+                  onChange={(e) => {
+                    const parentId = e.target.value;
+                    const parent = categories.find((c) => c._id === parentId);
+                    const calculatedLevel = parent ? (parent.level ?? 0) + 1 : 0;
+
+                    setForm((f) => ({
+                      ...f,
+                      parentCategoryId: parentId,
+                      level: calculatedLevel,
+                    }));
+                  }}
+                  className="w-full py-2 px-3 rounded-lg border border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
                   <option value="">None (Top Level Category)</option>
                   {categories.map((c) => (
@@ -168,21 +205,21 @@ export default function AdminCategoryNewPage() {
               </div>
 
               <div>
-                <Label>Image URL</Label>
+                <Label className="text-surface-900 dark:text-surface-200">Image URL</Label>
                 <Input
                   value={form.image}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("image", e.target.value)}
+                  onChange={(e) => set("image", e.target.value)}
                   placeholder="https://example.com/image.jpg"
                 />
               </div>
 
               <div>
-                <Label>Description</Label>
+                <Label className="text-surface-900 dark:text-surface-200">Description</Label>
                 <textarea
                   value={form.description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => set("description", e.target.value)}
+                  onChange={(e) => set("description", e.target.value)}
                   placeholder="Enter category description..."
-                  className="w-full px-4 py-2.5 rounded-lg border border-surface-200 bg-white h-32 text-sm"
+                  className="w-full px-4 py-2.5 rounded-lg border border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 placeholder:text-surface-400 dark:placeholder:text-surface-500 h-32 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
                   maxLength={1000}
                 />
               </div>
@@ -190,11 +227,11 @@ export default function AdminCategoryNewPage() {
           </Card>
 
           {/* Attributes Definition Card */}
-          <Card>
+          <Card className="bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-surface-900">Category Attributes</h2>
-                <p className="text-xs text-surface-500 mt-0.5">
+                <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-100">Category Attributes</h2>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">
                   Define technical attributes that products in this category should support.
                 </p>
               </div>
@@ -215,14 +252,14 @@ export default function AdminCategoryNewPage() {
             {attributes.length > 0 ? (
               <div className="space-y-4">
                 {attributes.map((attr, i) => (
-                  <div key={i} className="p-4 bg-surface-50 border border-surface-200 rounded-lg space-y-3">
+                  <div key={i} className="p-4 bg-surface-50 dark:bg-surface-800/50 border border-surface-200 dark:border-surface-700/60 rounded-lg space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
-                        <Label className="text-xs">Attribute Name</Label>
+                        <Label className="text-xs text-surface-700 dark:text-surface-300">Attribute Name</Label>
                         <Input
                           placeholder="e.g. Storage, Color, Size"
                           value={attr.name}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          onChange={(e) =>
                             setAttributes((arr) =>
                               arr.map((x, j) => (j === i ? { ...x, name: e.target.value } : x))
                             )
@@ -230,7 +267,7 @@ export default function AdminCategoryNewPage() {
                         />
                       </div>
                       <div>
-                        <Label className="text-xs">Type</Label>
+                        <Label className="text-xs text-surface-700 dark:text-surface-300">Type</Label>
                         <select
                           value={attr.type}
                           onChange={(e) =>
@@ -242,7 +279,7 @@ export default function AdminCategoryNewPage() {
                               )
                             )
                           }
-                          className="w-full px-3 py-2.5 rounded-lg border border-surface-200 bg-white text-sm"
+                          className="w-full px-3 py-2.5 rounded-lg border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none"
                         >
                           <option value="TEXT">TEXT</option>
                           <option value="SELECT">SELECT</option>
@@ -250,7 +287,7 @@ export default function AdminCategoryNewPage() {
                         </select>
                       </div>
                       <div className="flex items-end justify-between">
-                        <label className="flex items-center gap-2 text-sm text-surface-700 pb-2.5 cursor-pointer">
+                        <label className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300 pb-2.5 cursor-pointer select-none">
                           <input
                             type="checkbox"
                             checked={attr.isFilterable}
@@ -259,14 +296,14 @@ export default function AdminCategoryNewPage() {
                                 arr.map((x, j) => (j === i ? { ...x, isFilterable: e.target.checked } : x))
                               )
                             }
-                            className="rounded border-surface-300"
+                            className="rounded border-surface-300 dark:border-surface-600 dark:bg-surface-800"
                           />
                           Is Filterable
                         </label>
                         <button
                           type="button"
                           onClick={() => setAttributes((arr) => arr.filter((_, j) => j !== i))}
-                          className="text-red-600 hover:text-red-700 p-2 pb-2.5"
+                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-2 pb-2.5"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -275,11 +312,11 @@ export default function AdminCategoryNewPage() {
 
                     {attr.type === "SELECT" && (
                       <div>
-                        <Label className="text-xs">Options (Comma separated)</Label>
+                        <Label className="text-xs text-surface-700 dark:text-surface-300">Options (Comma separated)</Label>
                         <Input
                           placeholder="e.g. 64GB, 128GB, 256GB"
                           value={attr.options}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          onChange={(e) =>
                             setAttributes((arr) =>
                               arr.map((x, j) => (j === i ? { ...x, options: e.target.value } : x))
                             )
@@ -291,8 +328,8 @@ export default function AdminCategoryNewPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-surface-500 italic">
-                No custom attributes defined. Click "Add Attribute" to add parameters like Size, Brand, or Memory.
+              <p className="text-sm text-surface-500 dark:text-surface-400 italic">
+                No custom attributes defined. Click &quot;Add Attribute&quot; to add parameters like Size, Brand, or Memory.
               </p>
             )}
           </Card>
@@ -300,28 +337,28 @@ export default function AdminCategoryNewPage() {
 
         {/* Right Section - Settings & Submit */}
         <div className="space-y-6">
-          <Card>
-            <h2 className="text-xl font-semibold text-surface-900 mb-4">Status & Visibility</h2>
+          <Card className="bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 p-6">
+            <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-100 mb-4">Status & Visibility</h2>
             <div className="space-y-4 mb-6">
-              <label className="flex items-center gap-3 text-sm font-medium text-surface-900 cursor-pointer">
+              <label className="flex items-center gap-3 text-sm font-medium text-surface-900 dark:text-surface-200 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={form.isActive}
                   onChange={(e) => set("isActive", e.target.checked)}
-                  className="w-4 h-4 rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+                  className="rounded border-surface-300 dark:border-surface-700 dark:bg-surface-800 text-brand-600 focus:ring-brand-500"
                 />
                 Active (Visible on store)
               </label>
 
               <div>
-                <Label>Sort Order</Label>
+                <Label className="text-surface-900 dark:text-surface-200">Sort Order</Label>
                 <Input
                   type="number"
                   value={form.sortOrder}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("sortOrder", e.target.value)}
+                  onChange={(e) => set("sortOrder", e.target.value)}
                   placeholder="0"
                 />
-                <p className="text-xs text-surface-500 mt-1">Lower values will appear first in navigation.</p>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">Lower values will appear first in navigation.</p>
               </div>
             </div>
 

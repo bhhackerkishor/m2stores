@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,9 @@ import {
   ShieldCheck,
   RotateCcw,
   Zap,
-  Headphones
+  Headphones,
+  Send,
+  MessageSquare
 } from "lucide-react";
 import Link from "next/link";
 
@@ -38,10 +40,30 @@ export function OrderDetailClient({ order }: { order: any }) {
   const [ticketBusy, setTicketBusy] = useState(false);
   const [ticketSuccess, setTicketSuccess] = useState(false);
 
+  // Existing tickets for this order
+  const [existingTicket, setExistingTicket] = useState<any>(null);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [replyText, setReplyText] = useState("");
+  const [replyBusy, setReplyBusy] = useState(false);
+
   const tl = timelineFor(order.orderStatus, order.statusHistory || []);
   const cancellable = customerCanCancel(order.orderStatus);
   const needsPayment = order.orderStatus === "PENDING_PAYMENT" || (order.paymentInfo?.status !== "PAID" && order.paymentInfo?.status !== "CREATED");
   const isCOD = order.paymentInfo?.method === "COD";
+
+  // Fetch existing tickets for this order
+  useEffect(() => {
+    fetch("/api/support")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.data)) {
+          const linked = d.data.find((t: any) => t.orderId === order._id || t.orderNumber === order.orderNumber);
+          if (linked) setExistingTicket(linked);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setTicketsLoading(false));
+  }, [order._id, order.orderNumber]);
 
   const handlePayNow = async () => {
     setPaying(true);
@@ -80,6 +102,7 @@ export function OrderDetailClient({ order }: { order: any }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...ticketForm,
+          orderId: order._id,
           subject: `[${order.orderNumber}] ${ticketForm.subject}`,
         }),
       });
@@ -88,6 +111,7 @@ export function OrderDetailClient({ order }: { order: any }) {
         setError(data.error?.message || "Failed to create ticket");
         return;
       }
+      setExistingTicket(data.data);
       setTicketSuccess(true);
       setShowTicket(false);
     } catch {
@@ -95,6 +119,24 @@ export function OrderDetailClient({ order }: { order: any }) {
     } finally {
       setTicketBusy(false);
     }
+  };
+
+  const handleReply = async () => {
+    if (!replyText.trim() || replyText.trim().length < 1) return;
+    setReplyBusy(true);
+    try {
+      const res = await fetch(`/api/support/${existingTicket.ticketNumber}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: replyText.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setExistingTicket(data.data);
+        setReplyText("");
+      }
+    } catch {}
+    setReplyBusy(false);
   };
 
   const cancel = async () => {
@@ -343,14 +385,76 @@ export function OrderDetailClient({ order }: { order: any }) {
               )}
             </Card>
 
-            {/* Raise Ticket Card */}
+            {/* Raise Ticket Card / Existing Ticket Thread */}
             {order.orderStatus !== "CANCELLED" && (
               <Card className="p-6 border-surface-200/80 shadow-sm rounded-2xl bg-white">
                 <div className="flex items-center gap-2 mb-3">
                   <Headphones className="w-4 h-4 text-blue-600" />
-                  <h3 className="font-bold text-surface-900">Need Help?</h3>
+                  <h3 className="font-bold text-surface-900">
+                    {existingTicket ? "Support Ticket" : "Need Help?"}
+                  </h3>
                 </div>
-                {ticketSuccess ? (
+
+                {ticketsLoading ? (
+                  <div className="space-y-2">
+                    <div className="h-4 bg-surface-100 rounded animate-pulse w-3/4" />
+                    <div className="h-4 bg-surface-100 rounded animate-pulse w-1/2" />
+                  </div>
+                ) : existingTicket ? (
+                  <div className="space-y-3">
+                    {/* Ticket status badge */}
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        existingTicket.status === "OPEN" ? "bg-amber-100 text-amber-700" :
+                        existingTicket.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-700" :
+                        existingTicket.status === "RESOLVED" ? "bg-emerald-100 text-emerald-700" :
+                        "bg-surface-100 text-surface-600"
+                      }`}>
+                        {existingTicket.status.replace(/_/g, " ")}
+                      </span>
+                      <span className="text-[10px] text-surface-400 font-mono">
+                        #{existingTicket.ticketNumber}
+                      </span>
+                    </div>
+
+                    {/* Thread messages */}
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {(existingTicket.messages || []).map((msg: any, i: number) => (
+                        <div key={i} className={`p-2.5 rounded-lg text-xs ${
+                          msg.sender === "ADMIN"
+                            ? "bg-blue-50 border border-blue-100 ml-4"
+                            : "bg-surface-50 border border-surface-200 mr-4"
+                        }`}>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className={`font-bold ${msg.sender === "ADMIN" ? "text-blue-700" : "text-surface-700"}`}>
+                              {msg.sender === "ADMIN" ? "Support" : "You"}
+                            </span>
+                            <span className="text-surface-400">
+                              {new Date(msg.timestamp).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
+                          <p className="text-surface-600 whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Reply input (only if ticket is open/in-progress) */}
+                    {["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTOMER"].includes(existingTicket.status) && (
+                      <div className="flex gap-2 pt-2 border-t border-surface-100">
+                        <Input
+                          value={replyText}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReplyText(e.target.value)}
+                          placeholder="Reply to support..."
+                          className="text-xs"
+                          onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
+                        />
+                        <Button size="sm" onClick={handleReply} isLoading={replyBusy} disabled={!replyText.trim()}>
+                          <Send className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : ticketSuccess ? (
                   <div className="p-3 bg-accent-50 dark:bg-accent-950/30 rounded-lg text-sm text-accent-700 dark:text-accent-300">
                     Support ticket created. Our team will respond within 24 hours.
                   </div>

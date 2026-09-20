@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, ChevronRight, Edit3, Trash2, Folder } from "lucide-react";
+import { Plus, Search, Edit3, Trash2, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AdminCategoriesPage() {
@@ -20,7 +20,7 @@ export default function AdminCategoriesPage() {
       } else {
         setError(data.error?.message || "Failed to load categories");
       }
-    } catch (e) {
+    } catch {
       setError("Failed to fetch categories");
     } finally {
       setLoading(false);
@@ -44,7 +44,7 @@ export default function AdminCategoriesPage() {
       } else {
         alert(data.error?.message || "Failed to delete category");
       }
-    } catch (e) {
+    } catch {
       alert("Failed to delete category");
     }
   };
@@ -59,8 +59,8 @@ export default function AdminCategoriesPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-surface-900">Categories</h1>
-          <p className="text-surface-600 mt-1">{categories.length} total categories</p>
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-100">Categories</h1>
+          <p className="text-surface-600 dark:text-surface-400 mt-1">{categories.length} total categories</p>
         </div>
         <Link href="/admin/categories/new">
           <Button>
@@ -70,28 +70,28 @@ export default function AdminCategoriesPage() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg text-red-700 dark:text-red-300 text-sm">
           {error}
         </div>
       )}
 
       <div className="mb-6">
         <div className="relative max-w-xs sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-400 dark:text-surface-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search categories..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 placeholder:text-surface-400 dark:placeholder:text-surface-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
           />
         </div>
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-surface-500">Loading categories...</div>
+        <div className="p-8 text-center text-surface-500 dark:text-surface-400">Loading categories...</div>
       ) : filteredCategories.length === 0 ? (
-        <div className="p-8 text-center bg-white rounded-lg border border-surface-200 text-surface-500">
+        <div className="p-8 text-center bg-white dark:bg-surface-900 rounded-lg border border-surface-200 dark:border-surface-800 text-surface-500 dark:text-surface-400">
           No categories found.
         </div>
       ) : (
@@ -99,8 +99,8 @@ export default function AdminCategoriesPage() {
           {filteredCategories.map((category: any) => (
             <div
               key={category._id}
-              className={`bg-white border border-surface-200 rounded-lg p-4 flex items-center justify-between hover:shadow-sm transition-shadow ${
-                category.level > 0 ? "ml-6 border-l-4 border-l-blue-500" : ""
+              className={`bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-lg p-4 flex items-center justify-between hover:shadow-sm transition-all ${
+                category.level > 0 ? "ml-6 border-l-4 border-l-blue-500 dark:border-l-blue-400" : ""
               }`}
             >
               <div className="flex items-center gap-4">
@@ -108,23 +108,23 @@ export default function AdminCategoriesPage() {
                   <img
                     src={category.image}
                     alt={category.name}
-                    className="w-10 h-10 object-cover rounded-md bg-surface-100"
+                    className="w-10 h-10 object-cover rounded-md bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-md bg-surface-100 flex items-center justify-center text-surface-400">
+                  <div className="w-10 h-10 rounded-md bg-surface-100 dark:bg-surface-800 flex items-center justify-center text-surface-400 dark:text-surface-500 border border-surface-200 dark:border-surface-700">
                     <Folder className="w-5 h-5" />
                   </div>
                 )}
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-surface-900">{category.name}</p>
+                    <p className="font-semibold text-surface-900 dark:text-surface-100">{category.name}</p>
                     {category.level > 0 && (
-                      <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200">
+                      <span className="text-[10px] bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-800">
                         Subcategory
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-surface-500">{category.slug}</p>
+                  <p className="text-xs text-surface-500 dark:text-surface-400">{category.slug}</p>
                 </div>
               </div>
 
@@ -132,8 +132,8 @@ export default function AdminCategoriesPage() {
                 <span
                   className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                     category.isActive
-                      ? "bg-green-100 text-green-800"
-                      : "bg-yellow-100 text-yellow-800"
+                      ? "bg-green-100 dark:bg-green-950/60 text-green-800 dark:text-green-300"
+                      : "bg-yellow-100 dark:bg-yellow-950/60 text-yellow-800 dark:text-yellow-300"
                   }`}
                 >
                   {category.isActive ? "Active" : "Inactive"}
@@ -141,7 +141,7 @@ export default function AdminCategoriesPage() {
 
                 <Link
                   href={`/admin/categories/${category.slug}`}
-                  className="p-2 text-surface-600 hover:text-blue-600 hover:bg-surface-100 rounded-lg transition-colors"
+                  className="p-2 text-surface-600 dark:text-surface-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-lg transition-colors"
                   title="Edit Category"
                 >
                   <Edit3 className="w-4 h-4" />
@@ -149,7 +149,7 @@ export default function AdminCategoriesPage() {
 
                 <button
                   onClick={() => handleDelete(category.slug)}
-                  className="p-2 text-surface-600 hover:text-red-600 hover:bg-surface-100 rounded-lg transition-colors"
+                  className="p-2 text-surface-600 dark:text-surface-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-lg transition-colors"
                   title="Delete Category"
                 >
                   <Trash2 className="w-4 h-4" />

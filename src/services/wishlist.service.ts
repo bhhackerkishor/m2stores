@@ -54,7 +54,15 @@ export class WishlistService {
       if (!product || product.status !== "PUBLISHED") continue;
       const variant = (product.variants || []).find((v: any) => String(v.sku).toUpperCase() === it.sku);
       const unitPrice = variant?.salePrice || variant?.price || product.salePrice || product.basePrice;
-      const avail = await InventoryService.getAvailable(String(product._id), it.sku).catch(() => ({ available: 0, stock: 0, reserved: 0 }));
+
+      const inv: any = await InventoryState.findOne({ productId: product._id, sku: it.sku })
+        .select("stock reservedStock lowStockThreshold")
+        .lean();
+      const stock = inv?.stock ?? 0;
+      const reserved = inv?.reservedStock ?? 0;
+      const available = Math.max(0, stock - reserved);
+      const isActive = variant ? variant.isActive : true;
+
       items.push({
         productId: String(product._id),
         sku: it.sku,
@@ -63,8 +71,10 @@ export class WishlistService {
         image: product.images?.[0]?.url,
         unitPrice,
         mrp: variant?.price || product.basePrice,
-        inStock: (avail as any).available > 0,
-        available: (avail as any).available,
+        inStock: available > 0,
+        stock,
+        available,
+        isActive,
         addedAt: it.addedAt,
       });
     }

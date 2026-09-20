@@ -117,7 +117,7 @@ export default function AdminBrandsPage() {
           text: data.error?.message || data.message || "Failed to save brand",
         });
       }
-    } catch (error) {
+    } catch {
       setFeedback({ type: "error", text: "An error occurred while saving" });
     } finally {
       setSaving(false);
@@ -137,7 +137,7 @@ export default function AdminBrandsPage() {
       } else {
         alert(data.error?.message || "Failed to delete brand");
       }
-    } catch (error) {
+    } catch {
       alert("Failed to delete brand");
     } finally {
       setDeletingId(null);
@@ -155,8 +155,8 @@ export default function AdminBrandsPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-surface-900">Brands</h1>
-          <p className="text-surface-600 mt-1">Manage brand entities and visibility</p>
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-surface-100">Brands</h1>
+          <p className="text-surface-600 dark:text-surface-400 mt-1">Manage brand entities and visibility</p>
         </div>
         <Button onClick={openCreateDrawer}>
           <Plus className="w-4 h-4 mr-2" /> Add Brand
@@ -166,64 +166,76 @@ export default function AdminBrandsPage() {
       {/* Toolbar & Search */}
       <div className="flex items-center gap-4 max-w-md">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 dark:text-surface-500" />
           <Input
             placeholder="Search brands by name or slug..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 text-surface-900 dark:text-surface-100 placeholder:text-surface-400 dark:placeholder:text-surface-500"
           />
         </div>
       </div>
 
       {/* Main Grid Content */}
       {loading ? (
-        <div className="flex items-center justify-center p-12 text-surface-500 gap-2">
-          <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+        <div className="flex items-center justify-center p-12 text-surface-500 dark:text-surface-400 gap-2">
+          <Loader2 className="w-5 h-5 animate-spin text-blue-600 dark:text-blue-400" />
           Loading brands...
         </div>
       ) : filteredBrands.length === 0 ? (
-        <Card className="p-12 text-center text-surface-500">
-          <Building2 className="w-12 h-12 mx-auto text-surface-300 mb-3" />
-          <p className="text-lg font-medium text-surface-700">No brands found</p>
-          <p className="text-sm text-surface-500 mt-1">
+        <Card className="p-12 text-center bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800">
+          <Building2 className="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-3" />
+          <p className="text-lg font-medium text-surface-700 dark:text-surface-300">No brands found</p>
+          <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
             {searchQuery ? "Try refining your search terms" : "Click 'Add Brand' to create your first brand"}
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredBrands.map((brand) => (
-            <Card key={brand._id} className="p-6 hover:shadow-md transition-shadow flex flex-col justify-between">
+            <Card 
+              key={brand._id} 
+              className="p-6 bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 hover:border-surface-300 dark:hover:border-surface-700 hover:shadow-lg transition-all flex flex-col justify-between group"
+            >
               <div>
                 <div className="flex items-center gap-4">
                   {brand.logo ? (
                     <img
                       src={brand.logo}
                       alt={brand.name}
-                      className="w-14 h-14 rounded-lg object-cover border border-surface-200 shrink-0"
+                      className="w-14 h-14 rounded-xl object-cover border border-surface-200 dark:border-surface-700 shrink-0 bg-surface-50 dark:bg-surface-800"
                     />
                   ) : (
-                    <div className="w-14 h-14 bg-surface-100 rounded-lg flex items-center justify-center text-surface-500 font-bold text-lg shrink-0 border border-surface-200">
+                    <div className="w-14 h-14 bg-surface-100 dark:bg-surface-800 rounded-xl flex items-center justify-center text-surface-600 dark:text-surface-300 font-bold text-xl shrink-0 border border-surface-200 dark:border-surface-700">
                       {brand.name.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-surface-900 truncate">{brand.name}</p>
-                    <p className="text-xs text-surface-500 truncate">{brand.slug}</p>
+                    <p className="font-semibold text-surface-900 dark:text-surface-100 truncate text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {brand.name}
+                    </p>
+                    <p className="text-xs text-surface-500 dark:text-surface-400 truncate mt-0.5 font-mono">{brand.slug}</p>
                   </div>
                 </div>
 
-                {brand.description && (
-                  <p className="text-xs text-surface-600 mt-3 line-clamp-2">{brand.description}</p>
+                {brand.description ? (
+                  <p className="text-xs text-surface-600 dark:text-surface-400 mt-4 line-clamp-2 leading-relaxed">
+                    {brand.description}
+                  </p>
+                ) : (
+                  <p className="text-xs text-surface-400 dark:text-surface-600 italic mt-4">No description provided</p>
                 )}
               </div>
 
-              <div className="mt-6 pt-4 border-t border-surface-100 flex items-center justify-between">
+              <div className="mt-6 pt-4 border-t border-surface-100 dark:border-surface-800 flex items-center justify-between">
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    brand.isActive ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                    brand.isActive 
+                      ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60" 
+                      : "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60"
                   }`}
                 >
+                  <span className={`w-1.5 h-1.5 rounded-full ${brand.isActive ? "bg-emerald-500" : "bg-amber-500"}`} />
                   {brand.isActive ? "Active" : "Inactive"}
                 </span>
 
@@ -232,22 +244,22 @@ export default function AdminBrandsPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => openEditDrawer(brand)}
-                    className="h-8 px-2 text-surface-600 hover:text-blue-600"
+                    className="h-8 px-2 text-surface-600 dark:text-surface-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-surface-100 dark:hover:bg-surface-800"
                   >
-                    <Pencil className="w-4 h-4 mr-1" /> Edit
+                    <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     disabled={deletingId === brand._id}
                     onClick={() => handleDelete(brand._id)}
-                    className="h-8 px-2 text-surface-600 hover:text-red-600"
+                    className="h-8 px-2 text-surface-600 dark:text-surface-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
                   >
                     {deletingId === brand._id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <>
-                        <Trash2 className="w-4 h-4 mr-1" /> Delete
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                       </>
                     )}
                   </Button>
@@ -260,80 +272,82 @@ export default function AdminBrandsPage() {
 
       {/* Unified Side Drawer (Create / Edit) */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm transition-opacity">
+          <div className="w-full max-w-md bg-white dark:bg-surface-900 border-l border-surface-200 dark:border-surface-800 h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200">
             <div>
-              <div className="p-6 border-b border-surface-100 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-surface-900">
+              <div className="p-6 border-b border-surface-100 dark:border-surface-800 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-surface-900 dark:text-surface-100">
                   {editingBrand ? "Edit Brand" : "Create Brand"}
                 </h2>
                 <button
                   type="button"
                   onClick={closeDrawer}
-                  className="p-1 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors"
+                  className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form id="brand-form" onSubmit={handleSubmit} className="p-6 space-y-4">
+              <form id="brand-form" onSubmit={handleSubmit} className="p-6 space-y-5">
                 {feedback && (
                   <div
-                    className={`p-3 rounded-lg text-sm flex items-center gap-2 border ${
+                    className={`p-3.5 rounded-lg text-sm flex items-center gap-2.5 border ${
                       feedback.type === "success"
-                        ? "bg-green-50 text-green-800 border-green-200"
-                        : "bg-red-50 text-red-800 border-red-200"
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50"
+                        : "bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-900/50"
                     }`}
                   >
                     {feedback.type === "success" ? (
-                      <CheckCircle2 className="w-4 h-4 shrink-0 text-green-600" />
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400" />
                     )}
                     {feedback.text}
                   </div>
                 )}
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="brand-name">Brand Name *</Label>
+                  <Label htmlFor="brand-name" className="text-surface-900 dark:text-surface-200 font-medium">Brand Name *</Label>
                   <Input
                     id="brand-name"
                     value={formData.name}
                     onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g. Sony, Apple, Nike"
+                    className="bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 text-surface-900 dark:text-surface-100 placeholder:text-surface-400 dark:placeholder:text-surface-500"
                     required
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="brand-logo">Logo URL</Label>
+                  <Label htmlFor="brand-logo" className="text-surface-900 dark:text-surface-200 font-medium">Logo URL</Label>
                   <Input
                     id="brand-logo"
                     value={formData.logo}
                     onChange={(e) => setFormData((prev) => ({ ...prev, logo: e.target.value }))}
                     placeholder="https://example.com/logo.png"
+                    className="bg-white dark:bg-surface-900 border-surface-200 dark:border-surface-800 text-surface-900 dark:text-surface-100 placeholder:text-surface-400 dark:placeholder:text-surface-500"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="brand-description">Description</Label>
+                  <Label htmlFor="brand-description" className="text-surface-900 dark:text-surface-200 font-medium">Description</Label>
                   <textarea
                     id="brand-description"
                     value={formData.description}
                     onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 rounded-lg border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    rows={4}
+                    className="w-full px-3 py-2 rounded-lg border border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 placeholder:text-surface-400 dark:placeholder:text-surface-500 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     placeholder="Brief description of the brand..."
                   />
                 </div>
 
                 <div className="pt-2">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-surface-700">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-surface-700 dark:text-surface-300 select-none">
                     <input
                       type="checkbox"
                       checked={formData.isActive}
                       onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
-                      className="rounded border-surface-300 text-blue-600 focus:ring-blue-500"
+                      className="w-4 h-4 rounded border-surface-300 dark:border-surface-700 dark:bg-surface-800 text-blue-600 focus:ring-blue-500"
                     />
                     Active Status
                   </label>
@@ -341,7 +355,7 @@ export default function AdminBrandsPage() {
               </form>
             </div>
 
-            <div className="p-6 border-t border-surface-100 bg-surface-50 flex items-center justify-end gap-3">
+            <div className="p-6 border-t border-surface-100 dark:border-surface-800 bg-surface-50 dark:bg-surface-950/50 flex items-center justify-end gap-3">
               <Button type="button" variant="outline" onClick={closeDrawer}>
                 Cancel
               </Button>

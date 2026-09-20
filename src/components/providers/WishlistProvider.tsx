@@ -13,6 +13,8 @@ export interface WishlistItem {
   mrp: number;
   inStock: boolean;
   available: number;
+  stock: number;
+  isActive: boolean;
 }
 
 interface WishlistContextType {
