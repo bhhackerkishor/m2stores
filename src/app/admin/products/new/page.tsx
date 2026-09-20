@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import SeoMetadataCard from "@/components/admin/SeoMetadataCard"; // Adjust import path
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,28 @@ interface OptionItem {
   name: string;
   slug?: string;
 }
+interface IProductFormData {
+  name: string;
+  description: string;
+  images: string[];
+  seo: {
+    metaTitle: string;
+    metaDescription: string;
+    ogImage?: string;
+  };
+}
 
+// Initial state template
+const initialFormData: IProductFormData = {
+  name: "",
+  description: "",
+  images: [],
+  seo: {
+    metaTitle: "",
+    metaDescription: "",
+    ogImage: "",
+  },
+};
 export default function AdminProductNewPage() {
   const router = useRouter();
 
@@ -47,7 +69,7 @@ export default function AdminProductNewPage() {
   const [brands, setBrands] = useState<OptionItem[]>([]);
 
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<IProductFormData>({
     name: "",
     slug: "",
     description: "",
@@ -140,10 +162,15 @@ export default function AdminProductNewPage() {
     });
   };
 
-  const handleSeoChange = (field: "metaTitle" | "metaDescription" | "keywords", value: any) => {
-    setFormData((prev) => ({ ...prev, seo: { ...prev.seo, [field]: value } }));
+ const handleSeoChange = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      seo: {
+        ...prev.seo,
+        [field]: value,
+      },
+    }));
   };
-
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedCategory = e.target.value;
     setFormData((prev) => ({
@@ -821,6 +848,11 @@ export default function AdminProductNewPage() {
               />
             </div>
           </Card>
+          <SeoMetadataCard
+          formData={formData}
+          handleSeoChange={handleSeoChange}
+          siteUrl="https://yourstore.com"
+        />
         </div>
       </div>
     </form>

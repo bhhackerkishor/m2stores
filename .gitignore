@@ -6,7 +6,7 @@ jspm_packages/
 web_modules/
 .pnp/
 .pnp.js
-.next
+.next/
 # Python virtual environments
 venv/
 .venv/
@@ -30,6 +30,7 @@ target/
 # ==========================================
 .env
 .env.local
+.env.example
 .env.development.local
 .env.test.local
 .env.production.local
