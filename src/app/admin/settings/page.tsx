@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/providers/ToastProvider";
 
 export default function AdminSettingsPage() {
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [ok, setOk] = useState("");
+  const toast = useToast();
 
   const load = async () => {
     setLoading(true);
@@ -30,8 +30,6 @@ export default function AdminSettingsPage() {
 
   const save = async () => {
     setSaving(true);
-    setError("");
-    setOk("");
     try {
       const body: any = {};
       const num = (k: string) => {
@@ -44,7 +42,7 @@ export default function AdminSettingsPage() {
       num("taxRate"); str("gstIn"); str("businessName"); str("businessAddress"); str("businessState"); str("businessStateCode");
       str("bankName"); str("bankAccount"); str("bankIFSC"); str("bankBranch");
       num("shippingFlatRate"); num("freeShippingThreshold"); bool("freeShippingEnabled"); num("expressFee");
-      bool("isCODEnabled"); num("codMinOrderValue"); num("codMaxOrderValue"); num("codFee"); num("returnWindowDays");
+      bool("isCODEnabled"); num("codMinOrderValue"); num("codMaxOrderValue"); num("codFee"); num("codDaysCal"); num("returnWindowDays");
       str("phonePeMerchantId"); num("phonePeSaltIndex"); str("phonePeEnvironment"); str("phonePeHostUrl");
       bool("notificationEmailEnabled"); bool("notificationSMSEnabled"); str("seoTitle"); str("seoDescription");
 
@@ -54,9 +52,12 @@ export default function AdminSettingsPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!data.success) { setError(data.error?.message || "Save failed"); return; }
+      if (!data.success) {
+        toast.error("Save failed", data.error?.message || "Could not save settings");
+        return;
+      }
       setForm(data.data);
-      setOk("Settings saved successfully.");
+      toast.success("Settings saved", "All changes have been saved successfully.");
     } finally {
       setSaving(false);
     }
@@ -67,8 +68,6 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-3xl font-bold mb-6">Store Settings</h1>
-      {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
-      {ok && <div className="mb-4 p-3 bg-green-50 text-green-700 text-sm rounded-lg">{ok}</div>}
       <div className="space-y-6">
         <Card className="p-6">
           <h3 className="font-bold text-lg mb-4 border-b pb-2">Store Info</h3>
@@ -105,6 +104,7 @@ export default function AdminSettingsPage() {
             <div><Label>COD Fee (₹)</Label><Input type="number" value={form.codFee ?? ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("codFee", e.target.value)} /></div>
             <div><Label>COD Min Order</Label><Input type="number" value={form.codMinOrderValue ?? ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("codMinOrderValue", e.target.value)} /></div>
             <div><Label>COD Max Order</Label><Input type="number" value={form.codMaxOrderValue ?? ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("codMaxOrderValue", e.target.value)} /></div>
+            <div><Label>Estimated Delivery Days</Label><Input type="number" value={form.codDaysCal ?? ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => set("codDaysCal", e.target.value)} placeholder="3" /></div>
             <div className="flex items-end pb-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!form.isCODEnabled} onChange={(e) => set("isCODEnabled", e.target.checked)} /> COD enabled</label></div>
           </div>
         </Card>

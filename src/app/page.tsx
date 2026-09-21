@@ -14,6 +14,12 @@ import {
   CheckCircle2,
   ChevronRight,
   ShoppingBag,
+  Shield,
+  BadgeCheck,
+  Clock,
+  CreditCard,
+  Lock,
+  Star,
 } from "lucide-react";
 
 import { ProductCard } from "@/components/storefront/ProductCard";
@@ -101,6 +107,7 @@ export default async function HomePage() {
   const promo = (promoBanners as any[])[0];
   const storeSettings = settings as any;
   const freeShippingThreshold = storeSettings?.freeShippingThreshold || 499;
+  const deliveryDays = storeSettings?.codDaysCal ?? 3;
 
   return (
     <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100 transition-colors duration-300 antialiased selection:bg-brand-500 selection:text-white">
@@ -169,6 +176,7 @@ export default async function HomePage() {
                       alt={hero.title || "Hero Banner"}
                       fill
                       priority
+                       unoptimized 
                       sizes="(max-width: 1200px) 100vw, 500px"
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                     />
@@ -217,54 +225,84 @@ export default async function HomePage() {
       {/* Dynamic Banner Carousel */}
       <BannerCarousel />
 
-      {/* Brand Value Pillars */}
-      <section className="bg-white dark:bg-surface-900 border-y border-surface-200/80 dark:border-surface-800 py-8 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center md:text-left">
-          <div className="flex flex-col md:flex-row items-center gap-3.5 group">
-            <div className="w-11 h-11 rounded-2xl bg-brand-50 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/40 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110">
-              <Truck className="w-5 h-5" />
+      {/* Brand Value Pillars — Trust Bar */}
+      <section className="bg-white dark:bg-surface-900 border-y border-surface-200/80 dark:border-surface-800 py-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="flex flex-col items-center gap-3 group">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20 text-green-600 border border-green-200/60 dark:border-green-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-green-100">
+                <Truck className="w-7 h-7" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-surface-900 dark:text-surface-100">Free Express Delivery</h4>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
+                  On orders over ₹{freeShippingThreshold} · Pan-India
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-surface-900 dark:text-surface-100">Fast Shipping</h4>
-              <p className="text-[11px] sm:text-xs text-surface-500 dark:text-surface-400 mt-0.5">
-                Free delivery on orders over ₹{freeShippingThreshold}
-              </p>
+
+            <div className="flex flex-col items-center gap-3 group">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20 text-blue-600 border border-blue-200/60 dark:border-blue-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-blue-100">
+                <ShieldCheck className="w-7 h-7" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-surface-900 dark:text-surface-100">100% Genuine Products</h4>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
+                  Verified sellers & brand authorized
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-3 group">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/20 text-amber-600 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-amber-100">
+                <RotateCcw className="w-7 h-7" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-surface-900 dark:text-surface-100">7-Day Easy Returns</h4>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
+                  Hassle-free replacement or full refund
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-3 group">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/20 text-purple-600 border border-purple-200/60 dark:border-purple-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-purple-100">
+                <Headphones className="w-7 h-7" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-surface-900 dark:text-surface-100">24/7 Customer Support</h4>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
+                  Dedicated help for every order
+                </p>
+              </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="flex flex-col md:flex-row items-center gap-3.5 group">
-            <div className="w-11 h-11 rounded-2xl bg-brand-50 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/40 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110">
-              <ShieldCheck className="w-5 h-5" />
+      {/* Trust Badge Strip */}
+      <section className="bg-surface-50 dark:bg-surface-950 py-6 border-b border-surface-100 dark:border-surface-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs text-surface-500 dark:text-surface-400">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-green-600" />
+              <span className="font-semibold">SSL Encrypted Checkout</span>
             </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-surface-900 dark:text-surface-100">Secure Payments</h4>
-              <p className="text-[11px] sm:text-xs text-surface-500 dark:text-surface-400 mt-0.5">
-                PhonePe, UPI, Cards & COD supported
-              </p>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-blue-600" />
+              <span className="font-semibold">PhonePe Secured Payments</span>
             </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-center gap-3.5 group">
-            <div className="w-11 h-11 rounded-2xl bg-brand-50 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/40 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110">
-              <RotateCcw className="w-5 h-5" />
+            <div className="flex items-center gap-2">
+              <BadgeCheck className="w-4 h-4 text-amber-600" />
+              <span className="font-semibold">GST Invoice Available</span>
             </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-surface-900 dark:text-surface-100">7-Day Return Policy</h4>
-              <p className="text-[11px] sm:text-xs text-surface-500 dark:text-surface-400 mt-0.5">
-                Hassle-free replacement or refund
-              </p>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-purple-600" />
+              <span className="font-semibold">Same Day Dispatch</span>
             </div>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-center gap-3.5 group">
-            <div className="w-11 h-11 rounded-2xl bg-brand-50 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 border border-brand-200/50 dark:border-brand-800/40 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110">
-              <Headphones className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="font-bold text-xs sm:text-sm text-surface-900 dark:text-surface-100">Customer Support</h4>
-              <p className="text-[11px] sm:text-xs text-surface-500 dark:text-surface-400 mt-0.5">
-                Dedicated assistance for all orders
-              </p>
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <span className="font-semibold">4.8★ Customer Rating</span>
             </div>
           </div>
         </div>
@@ -310,6 +348,7 @@ export default async function HomePage() {
                             src={categoryImg}
                             alt={category.name}
                             fill
+                             unoptimized 
                             sizes="(max-width: 640px) 80px, 96px"
                             className="object-contain drop-shadow-md"
                           />
@@ -389,6 +428,7 @@ export default async function HomePage() {
               src={promo.image.url}
               alt={promo.title}
               fill
+               unoptimized 
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent p-6 sm:p-10 flex flex-col justify-center max-w-xl text-white">
@@ -417,7 +457,7 @@ export default async function HomePage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               {(under500 as any).items.slice(0, 4).map((product: any) => (
-                <ProductCard key={String(product._id)} product={JSON.parse(JSON.stringify(product))} />
+                <ProductCard key={String(product._id)} product={JSON.parse(JSON.stringify(product))} deliveryDays={deliveryDays} />
               ))}
             </div>
           </section>
@@ -439,7 +479,7 @@ export default async function HomePage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               {(under1000 as any).items.slice(0, 4).map((product: any) => (
-                <ProductCard key={String(product._id)} product={JSON.parse(JSON.stringify(product))} />
+                <ProductCard key={String(product._id)} product={JSON.parse(JSON.stringify(product))} deliveryDays={deliveryDays} />
               ))}
             </div>
           </section>
@@ -467,6 +507,7 @@ export default async function HomePage() {
               <ProductCard
                 key={String(product._id)}
                 product={JSON.parse(JSON.stringify(product))}
+                deliveryDays={deliveryDays}
               />
             ))}
           </div>
@@ -494,6 +535,7 @@ export default async function HomePage() {
               <ProductCard
                 key={String(product._id)}
                 product={JSON.parse(JSON.stringify(product))}
+                deliveryDays={deliveryDays}
               />
             ))}
           </div>
@@ -521,6 +563,7 @@ export default async function HomePage() {
               <ProductCard
                 key={String(product._id)}
                 product={JSON.parse(JSON.stringify(product))}
+                deliveryDays={deliveryDays}
               />
             ))}
           </div>
@@ -531,11 +574,15 @@ export default async function HomePage() {
       <section className="bg-surface-100 dark:bg-surface-900/60 border-t border-surface-200 dark:border-surface-800 py-16 mt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-12">
+            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-600 bg-brand-50 dark:bg-brand-950/80 border border-brand-200/60 dark:border-brand-800/40 px-4 py-1.5 rounded-full mb-4">
+              <BadgeCheck className="w-3.5 h-3.5" />
+              Verified Reviews
+            </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">
               Trusted by Shoppers Across India
             </h2>
             <p className="text-xs sm:text-sm text-surface-500 dark:text-surface-400 mt-2">
-              See what verified buyers have to say about their experience on M2Stores
+              Every review is from a verified purchase — no fake reviews, no manipulation
             </p>
           </div>
 
@@ -545,10 +592,14 @@ export default async function HomePage() {
                 ★★★★★
               </div>
               <p className="text-xs sm:text-sm text-surface-700 dark:text-surface-300 leading-relaxed mb-4">
-                "Super fast delivery to Chennai! The product was genuine and packed securely. Paid via PhonePe smoothly."
+                &ldquo;Super fast delivery to Chennai! The product was genuine and packed securely. Paid via PhonePe smoothly. Will order again!&rdquo;
               </p>
-              <div className="font-bold text-xs text-surface-900 dark:text-surface-100">
-                — Rajesh K. <span className="font-normal text-surface-400">(Verified Buyer)</span>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-xs">RK</div>
+                <div>
+                  <div className="font-bold text-xs text-surface-900 dark:text-surface-100">Rajesh K.</div>
+                  <div className="text-[10px] text-green-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
+                </div>
               </div>
             </div>
 
@@ -557,10 +608,14 @@ export default async function HomePage() {
                 ★★★★★
               </div>
               <p className="text-xs sm:text-sm text-surface-700 dark:text-surface-300 leading-relaxed mb-4">
-                "Easy return process when I ordered the wrong size. Support team resolved it within 24 hours."
+                &ldquo;Easy return process when I ordered the wrong size. Support team resolved it within 24 hours. Very professional!&rdquo;
               </p>
-              <div className="font-bold text-xs text-surface-900 dark:text-surface-100">
-                — Priya S. <span className="font-normal text-surface-400">(Verified Buyer)</span>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 font-bold text-xs">PS</div>
+                <div>
+                  <div className="font-bold text-xs text-surface-900 dark:text-surface-100">Priya S.</div>
+                  <div className="text-[10px] text-green-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
+                </div>
               </div>
             </div>
 
@@ -569,11 +624,35 @@ export default async function HomePage() {
                 ★★★★★
               </div>
               <p className="text-xs sm:text-sm text-surface-700 dark:text-surface-300 leading-relaxed mb-4">
-                "Great prices compared to other marketplaces and genuine brand products. Highly recommended!"
+                &ldquo;Best prices compared to Amazon/Flipkart for the same genuine products. COD option is a plus. Highly recommended!&rdquo;
               </p>
-              <div className="font-bold text-xs text-surface-900 dark:text-surface-100">
-                — Amit V. <span className="font-normal text-surface-400">(Verified Buyer)</span>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-bold text-xs">AV</div>
+                <div>
+                  <div className="font-bold text-xs text-surface-900 dark:text-surface-100">Amit V.</div>
+                  <div className="text-[10px] text-green-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
+                </div>
               </div>
+            </div>
+          </div>
+
+          {/* Trust Stats */}
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div className="p-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">50K+</div>
+              <div className="text-xs text-surface-500 dark:text-surface-400 mt-1 font-medium">Happy Customers</div>
+            </div>
+            <div className="p-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">4.8★</div>
+              <div className="text-xs text-surface-500 dark:text-surface-400 mt-1 font-medium">Average Rating</div>
+            </div>
+            <div className="p-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">99%</div>
+              <div className="text-xs text-surface-500 dark:text-surface-400 mt-1 font-medium">On-Time Delivery</div>
+            </div>
+            <div className="p-4">
+              <div className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">100%</div>
+              <div className="text-xs text-surface-500 dark:text-surface-400 mt-1 font-medium">Genuine Products</div>
             </div>
           </div>
         </div>

@@ -55,9 +55,30 @@ export class WishlistService {
       const variant = (product.variants || []).find((v: any) => String(v.sku).toUpperCase() === it.sku);
       const unitPrice = variant?.salePrice || variant?.price || product.salePrice || product.basePrice;
 
-      const inv: any = await InventoryState.findOne({ productId: product._id, sku: it.sku })
-        .select("stock reservedStock lowStockThreshold")
-        .lean();
+      // Try multiple SKU sources to find inventory
+      const skusToTry = [it.sku];
+      if (product.baseSKU && !skusToTry.includes(String(product.baseSKU).toUpperCase())) {
+        skusToTry.push(String(product.baseSKU).toUpperCase());
+      }
+      for (const v of product.variants || []) {
+        const vs = String(v.sku).toUpperCase();
+        if (!skusToTry.includes(vs)) skusToTry.push(vs);
+      }
+
+      let inv: any = null;
+      for (const trySku of skusToTry) {
+        inv = await InventoryState.findOne({ productId: product._id, sku: trySku })
+          .select("stock reservedStock lowStockThreshold")
+          .lean();
+        if (inv) break;
+      }
+      // Fallback: find any inventory record for this product
+      if (!inv) {
+        inv = await InventoryState.findOne({ productId: product._id })
+          .select("stock reservedStock lowStockThreshold")
+          .lean();
+      }
+
       const stock = inv?.stock ?? 0;
       const reserved = inv?.reservedStock ?? 0;
       const available = Math.max(0, stock - reserved);

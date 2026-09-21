@@ -18,7 +18,7 @@ export default function WishlistPage() {
   const { refresh: refreshCart } = useCart();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
-
+  
   const handleMove = async (sku: string, name: string) => {
     setBusy(sku);
     try {
@@ -29,7 +29,6 @@ export default function WishlistPage() {
       setBusy(null);
     }
   };
-
   const handleRemove = async (sku: string, name: string) => {
     await remove(sku);
     toast.info("Removed from wishlist", name);

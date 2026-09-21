@@ -38,6 +38,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/wishlist", { cache: "no-store" });
       const data = await res.json();
       if (data.success) setItems(data.data.items || []);
+      console.log(data);
     } catch {
       // ignore
     } finally {
@@ -53,6 +54,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     async (input: { productId?: string; sku?: string }) => {
       const res = await fetch("/api/wishlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
       const data = await res.json();
+      console.log(data)
       if (!data.success) throw new Error(data.error?.message || "Wishlist update failed");
       setItems(data.data.items || []);
       trackEvent("wishlist_add", { sku: input.sku, productId: input.productId });

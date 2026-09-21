@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     }
     const identity = await resolveIdentity();
     const view = await WishlistService.add(identity, parsed.data);
+    console.log(view,identity)
     return NextResponse.json(successResponse(view), { status: 201 });
   } catch (error: any) {
     if (error instanceof AppError) {

@@ -47,7 +47,7 @@ interface ProductPageProps {
   };
 }
 
-export function ProductDetailPage({ product }: ProductPageProps) {
+export function ProductDetailPage({ product, deliveryDays = 3 }: ProductPageProps & { deliveryDays?: number }) {
   const router = useRouter();
   const { add } = useCart();
   const { add: addWish, remove: removeWish, isWished } = useWishlist();
@@ -152,6 +152,12 @@ export function ProductDetailPage({ product }: ProductPageProps) {
             {discount > 0 && (
               <Badge variant="success" size="md">Save {discount}%</Badge>
             )}
+          </div>
+
+          {/* Delivery ETA */}
+          <div className="flex items-center gap-2 mb-4 text-sm text-surface-700 dark:text-surface-300">
+            <Truck className="w-4 h-4 text-green-600" />
+            <span>Delivery by {new Date(Date.now() + deliveryDays * 86400000).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
           </div>
 
           {/* Rating */}

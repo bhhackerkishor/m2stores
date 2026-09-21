@@ -43,6 +43,17 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState("");
   const idempotencyKey = useRef<string>(crypto.randomUUID());
+  const csrfRef = useRef<string>("");
+
+  const getCsrfToken = () => csrfRef.current;
+
+  const loadCsrf = async () => {
+    try {
+      const res = await fetch("/api/csrf");
+      const data = await res.json();
+      if (data.success) csrfRef.current = data.data.token;
+    } catch {}
+  };
 
   const loadSummary = async () => {
     setLoading(true);
@@ -70,6 +81,7 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
+    loadCsrf();
     loadSummary();
     trackEvent("checkout_started", {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,7 +97,7 @@ export default function CheckoutPage() {
     try {
       const res = await fetch("/api/checkout/validate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" ,"X-CSRF-Token": getCsrfToken(),  },
         body: JSON.stringify({ addressId, shippingMethod, paymentMethod, couponCode: coupon || undefined }),
       });
       const data = await res.json();
@@ -107,7 +119,9 @@ export default function CheckoutPage() {
     try {
       const res = await fetch("/api/checkout/create-order", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json" ,
+          "X-CSRF-Token": getCsrfToken(),},
         body: JSON.stringify({ addressId, shippingMethod, paymentMethod, couponCode: coupon || undefined, idempotencyKey: idempotencyKey.current }),
       });
       const data = await res.json();
@@ -129,7 +143,7 @@ export default function CheckoutPage() {
       toast.info("Redirecting to payment...", "You'll be taken to PhonePe to complete payment.");
       const payRes = await fetch("/api/payments/initiate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json","X-CSRF-Token": getCsrfToken(), },
         body: JSON.stringify({ orderNumber }),
       });
       const payData = await payRes.json();

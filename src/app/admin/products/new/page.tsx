@@ -896,7 +896,7 @@ export default function AdminProductNewPage() {
               images: formData.images.map((img) => img.url),
             }}
             handleSeoChange={handleSeoChange}
-            siteUrl="https://yourstore.com"
+            siteUrl="https://m2stores.in"
           />
         </div>
       </div>

@@ -29,7 +29,7 @@ interface SeoMetadataCardProps {
 export default function SeoMetadataCard({
   formData,
   handleSeoChange,
-  siteUrl = "https://yourstore.com",
+  siteUrl = "https://m2stores.in",
 }: SeoMetadataCardProps) {
   // Computed fallbacks for empty inputs
   const displayTitle =

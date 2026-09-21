@@ -4,6 +4,7 @@ import { ProductFilters } from "@/components/storefront/ProductFilters";
 import { SearchAutocomplete } from "@/components/storefront/SearchAutocomplete";
 import { SearchTracker } from "@/components/storefront/SearchTracker";
 import { CatalogService } from "@/services/catalog.service";
+import { getPublicSettings } from "@/lib/public-settings";
 
 export const metadata: Metadata = {
   title: "Search | M2Stores",
@@ -39,7 +40,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const q = sp.q || "";
 
-  const [result, brands, categories, facets] = await Promise.all([
+  const [result, brands, categories, facets, pubSettings] = await Promise.all([
     q
       ? CatalogService.listProducts({
           q,
@@ -69,6 +70,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           attrs: parseAttrs(sp),
         }).catch(() => ({ attributes: {} as Record<string, Array<{ value: string; count: number }>> }))
       : { attributes: {} as Record<string, Array<{ value: string; count: number }>> },
+    getPublicSettings(),
   ]);
 
   return (
@@ -105,7 +107,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
               </details>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 content-start">
                 {result.items.map((p: any) => (
-                  <ProductCard key={String(p._id)} product={JSON.parse(JSON.stringify(p))} />
+                  <ProductCard key={String(p._id)} product={JSON.parse(JSON.stringify(p))} deliveryDays={pubSettings.deliveryDays} />
                 ))}
               </div>
               {result.items.length === 0 && (

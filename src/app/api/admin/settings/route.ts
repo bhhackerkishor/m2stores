@@ -35,6 +35,7 @@ const schema = z.object({
   codMaxOrderValue: z.number().min(0).optional(),
   codFee: z.number().min(0).optional(),
   codAllowedPincodes: z.array(z.string().regex(/^\d{6}$/)).max(500).optional(),
+  codDaysCal: z.number().min(1).max(30).optional(),
   returnWindowDays: z.number().min(0).max(90).optional(),
   phonePeMerchantId: z.string().max(100).optional(),
   phonePeSaltIndex: z.number().min(0).optional(),

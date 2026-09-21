@@ -27,6 +27,7 @@ export interface ISetting extends Document {
   codMaxOrderValue: number;
   codFee: number;
   codAllowedPincodes: string[];
+  codDaysCal:number;
   returnWindowDays: number;
   phonePeMerchantId?: string;
   phonePeSaltKey?: string;
@@ -72,6 +73,7 @@ const SettingSchema = new Schema<ISetting>(
     codFee: { type: Number, default: 0 },
     codAllowedPincodes: { type: [String], default: [] },
     returnWindowDays: { type: Number, default: 7 },
+    codDaysCal: { type: Number, default: 3 },
     phonePeMerchantId: { type: String },
     phonePeSaltKey: { type: String },
     phonePeSaltIndex: { type: Number },

@@ -243,7 +243,7 @@ const payload = {
         processed: false,
       });
       await payment.save();
-      const out: any = await PaymentService.confirmPaid(payment.merchantTransactionId, "webhook");
+      const out: any = await PaymentService.confirmPaid(payment.merchantTransactionId, "webhook", decoded?.data?.amount);
       await Payment.updateOne(
         { merchantTransactionId },
         { $set: { "rawWebhookLogs.$[l].processed": true, "rawWebhookLogs.$[l].processedAt": new Date() } },

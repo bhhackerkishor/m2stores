@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { CatalogService } from "@/services/catalog.service";
 
-export async function FrequentlyBoughtTogether({ productId }: { productId: string }) {
+export async function FrequentlyBoughtTogether({ productId, deliveryDays = 3 }: { productId: string; deliveryDays?: number }) {
   let items: any[] = [];
   try {
     items = await CatalogService.frequentlyBoughtTogether(productId, 4);
@@ -15,7 +15,7 @@ export async function FrequentlyBoughtTogether({ productId }: { productId: strin
       <h2 className="text-2xl font-bold text-surface-900 mb-6">Frequently Bought Together</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {items.map((p: any) => (
-          <ProductCard key={String(p._id)} product={JSON.parse(JSON.stringify(p))} />
+          <ProductCard key={String(p._id)} product={JSON.parse(JSON.stringify(p))} deliveryDays={deliveryDays} />
         ))}
       </div>
       <p className="text-xs text-surface-400 mt-3">Based on real co-purchases from paid orders.</p>

@@ -6,6 +6,7 @@ import { RecentlyViewed } from "@/components/storefront/RecentlyViewed";
 import { FrequentlyBoughtTogether } from "@/components/storefront/FrequentlyBoughtTogether";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { CatalogService } from "@/services/catalog.service";
+import { getPublicSettings } from "@/lib/public-settings";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -76,29 +77,32 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   }
 
   const plain = JSON.parse(JSON.stringify(product));
-  const related = await CatalogService.getRelatedProducts(
-    String(product._id),
-    String(product.categoryId?._id || product.categoryId),
-    product.brandId?._id ? String(product.brandId._id) : undefined,
-    8
-  );
+  const [related, settings] = await Promise.all([
+    CatalogService.getRelatedProducts(
+      String(product._id),
+      String(product.categoryId?._id || product.categoryId),
+      product.brandId?._id ? String(product.brandId._id) : undefined,
+      8
+    ),
+    getPublicSettings(),
+  ]);
 
   return (
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd(plain)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(plain)) }} />
       <ProductViewTracker slug={plain.slug} productId={String(product._id)} name={plain.name} price={plain.salePrice || plain.basePrice} />
-      <ProductDetailPage product={plain} />
+      <ProductDetailPage product={plain} deliveryDays={settings.deliveryDays} />
       <section className="max-w-7xl mx-auto px-4 pb-4">
         <ProductReviews productId={String(product._id)} />
       </section>
-      <FrequentlyBoughtTogether productId={String(product._id)} />
+      <FrequentlyBoughtTogether productId={String(product._id)} deliveryDays={settings.deliveryDays} />
       {related.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 pb-12">
           <h2 className="text-2xl font-bold text-surface-900 mb-6">Related Products</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {related.map((r: any) => (
-              <ProductCard key={String(r._id)} product={JSON.parse(JSON.stringify(r))} />
+              <ProductCard key={String(r._id)} product={JSON.parse(JSON.stringify(r))} deliveryDays={settings.deliveryDays} />
             ))}
           </div>
         </section>

@@ -14,7 +14,8 @@ export type OrderStatus =
   | "RETURN_REJECTED"
   | "RETURNED"
   | "REFUND_PENDING"
-  | "REFUNDED";
+  | "REFUNDED"
+  | "PAYMENT_RECEIVED";
 
 export type PaymentMethod = "PHONEPE" | "COD";
 export type PaymentStatus = "CREATED" | "PENDING" | "AUTHORIZED" | "PAID" | "FAILED" | "CANCELLED" | "REFUNDED" | "PARTIALLY_REFUNDED";
@@ -60,6 +61,22 @@ export interface IPricingSnapshot {
   grandTotal: number;
 }
 
+export interface IShippingEvent {
+  status: string;
+  location?: string;
+  city?: string;
+  timestamp: Date;
+  note?: string;
+}
+
+export interface IDeliveryChange {
+  previousDate: Date | null;
+  newDate: Date;
+  reason: string;
+  changedBy: Types.ObjectId;
+  changedAt: Date;
+}
+
 export interface IShippingDetails {
   provider?: string;
   shipmentId?: string;
@@ -68,9 +85,11 @@ export interface IShippingDetails {
   trackingUrl?: string;
   fee?: number;
   estimatedDelivery?: Date;
+  currentlyAt?: string;
   shippedAt?: Date;
   deliveredAt?: Date;
-  events?: Array<{ status: string; location?: string; timestamp: Date; note?: string }>;
+  events?: IShippingEvent[];
+  deliveryChanges?: IDeliveryChange[];
 }
 
 export interface IOrderStatusHistory {
@@ -170,7 +189,7 @@ const OrderSchema = new Schema<IOrder>(
       paymentId: { type: Schema.Types.ObjectId, ref: "Payment" },
       status: { type: String, enum: ["CREATED", "PENDING", "AUTHORIZED", "PAID", "FAILED", "CANCELLED", "REFUNDED", "PARTIALLY_REFUNDED"], default: "CREATED", index: true },
     },
-    orderStatus: { type: String, enum: ["PENDING_PAYMENT", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED", "RETURN_REQUESTED", "RETURN_APPROVED", "RETURN_REJECTED", "RETURNED", "REFUND_PENDING", "REFUNDED"], default: "PENDING_PAYMENT", index: true },
+    orderStatus: { type: String, enum: ["PENDING_PAYMENT", "CONFIRMED", "PROCESSING", "PACKED", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED", "RETURN_REQUESTED", "RETURN_APPROVED", "RETURN_REJECTED", "RETURNED", "REFUND_PENDING", "REFUNDED", "PAYMENT_RECEIVED"], default: "PENDING_PAYMENT", index: true },
     statusHistory: [
       {
         status: { type: String, required: true },
@@ -187,14 +206,25 @@ const OrderSchema = new Schema<IOrder>(
       trackingUrl: { type: String },
       fee: { type: Number },
       estimatedDelivery: { type: Date },
+      currentlyAt: { type: String },
       shippedAt: { type: Date },
       deliveredAt: { type: Date },
       events: [
         {
           status: { type: String },
           location: { type: String },
+          city: { type: String },
           timestamp: { type: Date, default: Date.now },
           note: { type: String },
+        },
+      ],
+      deliveryChanges: [
+        {
+          previousDate: { type: Date },
+          newDate: { type: Date },
+          reason: { type: String },
+          changedBy: { type: Schema.Types.ObjectId, ref: "User" },
+          changedAt: { type: Date, default: Date.now },
         },
       ],
     },

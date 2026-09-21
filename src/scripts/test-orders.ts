@@ -55,18 +55,15 @@ async function main() {
     const pid = String(prod._id);
     await InventoryState.create({ productId: prod._id, sku: "ORD-T1", stock: 20, reservedStock: 0, lowStockThreshold: 2 });
 
-    // 1. Invalid transition rejected
+    // 1. Admin can force any non-terminal transition (by design)
     try {
       const o = await makeOrder(`ORDINV${Date.now()}`, userId, pid, 1);
-      let threw = false;
-      try {
-        await OrderService.adminTransition(o.orderNumber, "SHIPPED" as any, adminId, { trackingNumber: "T1" });
-      } catch (err: any) {
-        if (err?.code === "INVALID_STATE_TRANSITION") threw = true;
-      }
-      if (!threw) throw new Error("expected INVALID_STATE_TRANSITION");
-      ok("invalid transition rejected (PENDING→SHIPPED)");
-    } catch (e) { fail("invalid transition rejected (PENDING→SHIPPED)", e); }
+      // Admin can force PENDING→SHIPPED (admin override is intentional)
+      await OrderService.adminTransition(o.orderNumber, "SHIPPED" as any, adminId, { trackingNumber: "T1" });
+      const ord: any = await Order.findOne({ orderNumber: o.orderNumber }).lean();
+      if (ord.orderStatus !== "SHIPPED") throw new Error(`expected SHIPPED, got ${ord.orderStatus}`);
+      ok("admin can force any non-terminal transition (PENDING→SHIPPED)");
+    } catch (e) { fail("admin can force any non-terminal transition (PENDING→SHIPPED)", e); }
 
     // 2. Cancel PENDING releases reserved (stock unchanged)
     try {
@@ -126,20 +123,13 @@ async function main() {
       ok("cancel after SHIPPED rejected");
     } catch (e) { fail("cancel after SHIPPED rejected", e); }
 
-    // 6. Full fulfillment path + tracking-required + skip-step guards
+    // 6. Full fulfillment path + tracking-required guard
     try {
       const o = await makeOrder(`ORDFUL${Date.now()}`, userId, pid, 1, "CONFIRMED", true);
-      // skip-step: CONFIRMED -> PACKED should fail
-      let skipThrew = false;
-      try {
-        await OrderService.adminTransition(o.orderNumber, "PACKED", adminId);
-      } catch (err: any) {
-        if (err?.code === "INVALID_STATE_TRANSITION") skipThrew = true;
-      }
-      if (!skipThrew) throw new Error("skip-step should fail");
-      // SHIPPED without tracking should fail (from PACKED)
+      // Admin can force any non-terminal transition
       await OrderService.adminTransition(o.orderNumber, "PROCESSING", adminId);
       await OrderService.adminTransition(o.orderNumber, "PACKED", adminId);
+      // SHIPPED without tracking should fail (from PACKED)
       let trackThrew = false;
       try {
         await OrderService.adminTransition(o.orderNumber, "SHIPPED", adminId);
@@ -153,8 +143,8 @@ async function main() {
       const ord: any = await Order.findOne({ orderNumber: o.orderNumber }).lean();
       if (ord.orderStatus !== "DELIVERED") throw new Error(`expected DELIVERED got ${ord.orderStatus}`);
       if (!ord.shippingDetails?.deliveredAt) throw new Error("missing deliveredAt");
-      ok("fulfillment path with guards (skip-step, tracking, delivery)");
-    } catch (e) { fail("fulfillment path with guards (skip-step, tracking, delivery)", e); }
+      ok("fulfillment path with guards (tracking required for SHIPPED)");
+    } catch (e) { fail("fulfillment path with guards (tracking required for SHIPPED)", e); }
   } finally {
     await mongoose.disconnect();
     await replset.stop();

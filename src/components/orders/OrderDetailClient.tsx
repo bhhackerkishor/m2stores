@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export function OrderDetailClient({ order }: { order: any }) {
+export function OrderDetailClient({ order, deliveryDays = 3 }: { order: any; deliveryDays?: number }) {
   const router = useRouter();
   const [reason, setReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
@@ -225,6 +225,11 @@ export function OrderDetailClient({ order }: { order: any }) {
               <p className="text-xs text-surface-500 mt-1">
                 Placed on {new Date(order.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </p>
+              {!["DELIVERED", "CANCELLED", "REFUNDED", "RETURNED"].includes(order.orderStatus) && (
+                <p className="text-xs text-blue-600 font-semibold mt-1">
+                  Estimated delivery by {new Date(new Date(order.createdAt).getTime() + deliveryDays * 86400000).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -279,6 +284,66 @@ export function OrderDetailClient({ order }: { order: any }) {
 
               <OrderTimeline placedAt={tl.placedAt} steps={tl.steps} terminal={tl.terminal} />
             </Card>
+
+            {/* Live Delivery Tracking Card */}
+            {["SHIPPED", "OUT_FOR_DELIVERY"].includes(order.orderStatus) && (
+              <Card className="p-6 md:p-8 border-blue-200/80 shadow-sm rounded-2xl bg-gradient-to-br from-blue-50 to-white">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-blue-100">
+                  <MapPin className="w-5 h-5 text-blue-600" />
+                  <h2 className="font-bold text-blue-900">Live Tracking</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  {order.shippingDetails?.currentlyAt && (
+                    <div className="p-3 bg-white rounded-xl border border-blue-100">
+                      <p className="text-xs font-medium text-blue-600 mb-1">Currently At</p>
+                      <p className="text-sm font-bold text-blue-900">{order.shippingDetails.currentlyAt}</p>
+                    </div>
+                  )}
+                  {order.shippingDetails?.estimatedDelivery && (
+                    <div className="p-3 bg-white rounded-xl border border-blue-100">
+                      <p className="text-xs font-medium text-blue-600 mb-1">Estimated Delivery</p>
+                      <p className="text-sm font-bold text-blue-900">
+                        {new Date(order.shippingDetails.estimatedDelivery).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* ETA Change Notice */}
+                {order.shippingDetails?.deliveryChanges?.length > 0 && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl mb-4">
+                    <p className="text-xs font-medium text-amber-700 mb-1 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> Delivery Update
+                    </p>
+                    {order.shippingDetails.deliveryChanges.map((ch: any, i: number) => (
+                      <div key={i} className="text-xs text-amber-800 mt-1">
+                        <p>{ch.reason}</p>
+                        {ch.previousDate && (
+                          <p className="text-amber-600">Changed from {new Date(ch.previousDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Recent Tracking Events */}
+                {order.shippingDetails?.events?.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-blue-700">Recent Updates</p>
+                    {[...order.shippingDetails.events].reverse().slice(0, 3).map((ev: any, i: number) => (
+                      <div key={i} className="flex gap-3 text-xs">
+                        <span className="text-blue-400 shrink-0 font-mono">{new Date(ev.timestamp).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
+                        <div>
+                          <span className="font-medium text-blue-900">{ev.status}</span>
+                          {ev.location && <span className="text-blue-600"> — {ev.location}</span>}
+                          {ev.note && <span className="text-blue-500 block ml-0 mt-0.5">{ev.note}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
 
             {/* Item Breakdown List */}
             <Card className="p-6 md:p-8 border-surface-200/80 shadow-sm rounded-2xl bg-white">

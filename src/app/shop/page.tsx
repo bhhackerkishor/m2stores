@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { ProductFilters } from "@/components/storefront/ProductFilters";
 import { CatalogService, ProductFilters as F } from "@/services/catalog.service";
+import { getPublicSettings } from "@/lib/public-settings";
 import { SearchIcon } from "lucide-react";
 
 interface ShopSearchParams {
@@ -59,11 +60,12 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
     limit: 12,
   };
 
-  const [result, brands, categories, facets] = await Promise.all([
+  const [result, brands, categories, facets, pubSettings] = await Promise.all([
     CatalogService.listProducts(filters),
     CatalogService.getBrands(true),
     CatalogService.getCategories(true),
     CatalogService.getFacets(filters).catch(() => ({ attributes: {} as Record<string, Array<{ value: string; count: number }>> })),
+    getPublicSettings(),
   ]);
 
   const totalPages = result.totalPages;
@@ -111,7 +113,7 @@ export default async function ShopPage({ searchParams }: { searchParams: Promise
           {/* Product grid */}
           <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5">
             {result.items.map((product: any) => (
-              <ProductCard key={String(product._id)} product={JSON.parse(JSON.stringify(product))} />
+              <ProductCard key={String(product._id)} product={JSON.parse(JSON.stringify(product))} deliveryDays={pubSettings.deliveryDays} />
             ))}
           </div>
 

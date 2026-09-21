@@ -6,6 +6,7 @@ import { OrderDetailClient } from "@/components/orders/OrderDetailClient";
 import { ReturnSection } from "@/components/orders/ReturnSection";
 import { connectDB } from "@/lib/db";
 import { ReturnRequest } from "@/models/ReturnRequest";
+import { getPublicSettings } from "@/lib/public-settings";
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getSessionFromCookie().catch(() => null);
@@ -20,6 +21,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   let eligibility: any = { eligible: false, reason: "", items: [], windowDays: 7 };
   let existing: any[] = [];
+  let deliveryDays = 3;
   if (order.orderStatus === "DELIVERED") {
     try {
       eligibility = await ReturnService.eligibleItems(id, session.userId);
@@ -29,10 +31,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     await connectDB();
     existing = await ReturnRequest.find({ orderNumber: id, userId: session.userId }).sort({ createdAt: -1 }).lean();
   }
+  try {
+    const pub = await getPublicSettings();
+    deliveryDays = pub.deliveryDays;
+  } catch {}
 
   return (
     <div>
-      <OrderDetailClient order={JSON.parse(JSON.stringify(order))} />
+      <OrderDetailClient order={JSON.parse(JSON.stringify(order))} deliveryDays={deliveryDays} />
       {(order.orderStatus === "DELIVERED" || existing.length > 0) && (
         <div className="max-w-5xl mx-auto px-4 pb-8">
           <ReturnSection

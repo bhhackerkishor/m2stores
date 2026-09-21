@@ -17,7 +17,7 @@ export class PaymentService {
     await connectDB();
     const order: any = await Order.findOne({ orderNumber }).lean();
     if (!order) throw new AppError("Order not found", 404, "NOT_FOUND");
-    if (["DELIVERED", "CANCELLED", "REFUNDED"].includes(order.orderStatus)) {
+    if (["DELIVERED", "CANCELLED", "REFUNDED", "PAYMENT_RECEIVED"].includes(order.orderStatus)) {
       throw new AppError(`Cannot pay for order in status ${order.orderStatus}`, 400, "INVALID_STATUS");
     }
     const existing: any = await Payment.findOne({ orderId: order._id }).lean();
@@ -38,8 +38,17 @@ export class PaymentService {
   /**
    * Server-side confirm. Re-verifies with the provider first —
    * NEVER trusts frontend success flags.
+   *
+   * FIX (FINDING-01): Accepts optional verifiedAmount (paise) from provider.
+   * Compares against payment.amount (rupees) to prevent amount tampering.
+   *
+   * FIX (FINDING-02): If order is already CANCELLED/REFUNDED, transitions to
+   * PAYMENT_RECEIVED and auto-refunds instead of creating inconsistent state.
+   *
+   * FIX (FINDING-03): If inventory reservation expired during payment, attempts
+   * atomic reacquire. Falls back to PAYMENT_RECEIVED for manual reconciliation.
    */
-  static async confirmPaid(merchantTransactionId: string, source: string) {
+  static async confirmPaid(merchantTransactionId: string, source: string, verifiedAmountPaise?: number) {
     await connectDB();
     const payment: any = await Payment.findOne({ merchantTransactionId });
     if (!payment) throw new AppError("Payment not found", 404, "NOT_FOUND");
@@ -48,12 +57,73 @@ export class PaymentService {
       return { payment: payment.toObject(), duplicate: true };
     }
 
-    return withTransaction(async (session) => {
-      payment.status = "PAID";
-      await payment.save(session ? { session } : undefined);
+    // ── FINDING-01: Verify payment amount from provider ──
+    // verifiedAmountPaise is in paise (from PhonePe API); payment.amount is in rupees
+    if (verifiedAmountPaise !== undefined && payment.provider === "PHONEPE") {
+      const expectedPaise = Math.round(payment.amount * 100);
+      if (verifiedAmountPaise !== expectedPaise) {
+        logger.error("PAYMENT_AMOUNT_MISMATCH", "payment", {
+          merchantTransactionId,
+          providerPaise: verifiedAmountPaise,
+          expectedPaise,
+          paymentAmountRupees: payment.amount,
+          source,
+        });
+        throw new AppError(
+          `Payment amount mismatch: expected ₹${payment.amount} (₹${expectedPaise}p), got ₹${verifiedAmountPaise / 100} (${verifiedAmountPaise}p)`,
+          400,
+          "AMOUNT_MISMATCH"
+        );
+      }
+    }
 
+    let latePaymentRefund: { method: string; paymentId: string; orderId: string; amount: number; reason: string } | null = null;
+
+    const result = await withTransaction(async (session) => {
       const order: any = await Order.findById(payment.orderId, null, session ? { session } : undefined);
       if (!order) throw new AppError("Order not found", 404, "NOT_FOUND");
+      const previousOrderStatus: string = order.orderStatus;
+
+      // ── FINDING-02: Late payment after cancellation/refund ──
+      if (["CANCELLED", "REFUNDED", "RETURNED"].includes(order.orderStatus)) {
+        payment.status = "PAID";
+        payment.refundDetails = {
+          refundId: `LATE_${merchantTransactionId}`,
+          amount: order.pricingSnapshot.grandTotal,
+          status: "PENDING",
+          initiatedAt: new Date(),
+        };
+        await payment.save(session ? { session } : undefined);
+
+        order.orderStatus = "PAYMENT_RECEIVED";
+        order.statusHistory.push({
+          status: "PAYMENT_RECEIVED",
+          timestamp: new Date(),
+          notes: `Payment confirmed (INR ${order.pricingSnapshot.grandTotal}) but order was ${previousOrderStatus}. Auto-refund will be initiated. (${source})`,
+        });
+        await order.save(session ? { session } : undefined);
+
+        // Queue refund to run AFTER transaction commits (provider checks DB for PAID status)
+        latePaymentRefund = {
+          method: order.paymentInfo.method,
+          paymentId: payment.paymentId,
+          orderId: String(order._id),
+          amount: order.pricingSnapshot.grandTotal,
+          reason: `Late payment received for ${previousOrderStatus} order (${source})`,
+        };
+
+        logger.warn("PAYMENT_RECEIVED_LATE", "payment", {
+          merchantTransactionId,
+          orderNumber: order.orderNumber,
+          previousOrderStatus,
+          source,
+        });
+        return { payment: payment.toObject(), duplicate: false, reconciliation: true, latePaymentRefund };
+      }
+
+      // ── Normal path: mark payment PAID ──
+      payment.status = "PAID";
+      await payment.save(session ? { session } : undefined);
 
       if (order.paymentInfo?.status !== "PAID") {
         order.paymentInfo = { ...(order.paymentInfo || {}), status: "PAID", paymentId: payment._id };
@@ -64,19 +134,78 @@ export class PaymentService {
         await order.save(session ? { session } : undefined);
       }
 
-      // Commit reserved inventory exactly once (idempotent per operationId)
+      // ── FINDING-03: Commit reserved inventory with expired-reservation recovery ──
+      let inventoryFullyCommitted = true;
       for (const item of order.items) {
-        await InventoryService.commit({
-          productId: String(item.productId),
-          sku: item.sku,
-          quantity: item.quantity,
-          orderId: String(order._id),
-          operationId: `COMMIT_${order.orderNumber}_${String(item.sku).toUpperCase()}`,
-          reason: `Payment confirmed ${order.orderNumber} (${source})`,
-        });
+        try {
+          await InventoryService.commit({
+            productId: String(item.productId),
+            sku: item.sku,
+            quantity: item.quantity,
+            orderId: String(order._id),
+            operationId: `COMMIT_${order.orderNumber}_${String(item.sku).toUpperCase()}`,
+            reason: `Payment confirmed ${order.orderNumber} (${source})`,
+          });
+        } catch (e: any) {
+          const isCommitFailure =
+            e?.code === "COMMIT_FAILED" || e?.message?.includes("Cannot commit");
+          if (!isCommitFailure) throw e;
+
+          // Reservation expired — attempt atomic reacquire
+          logger.warn("RESERVATION_EXPIRED_REACQUIRE_ATTEMPT", "payment", {
+            merchantTransactionId,
+            sku: item.sku,
+            source,
+          });
+          try {
+            await InventoryService.reserve({
+              productId: String(item.productId),
+              sku: item.sku,
+              quantity: item.quantity,
+              orderId: String(order._id),
+              orderItemId: item._id || `${String(order._id)}_${item.sku}`,
+              operationId: `REACQ_${order.orderNumber}_${String(item.sku).toUpperCase()}`,
+              reason: `Reacquire stock for paid order ${order.orderNumber} (${source})`,
+            });
+            await InventoryService.commit({
+              productId: String(item.productId),
+              sku: item.sku,
+              quantity: item.quantity,
+              orderId: String(order._id),
+              operationId: `COMMIT_${order.orderNumber}_${String(item.sku).toUpperCase()}`,
+              reason: `Payment confirmed after reacquire ${order.orderNumber} (${source})`,
+            });
+          } catch (reacquireError: any) {
+            // Stock unavailable — order is paid but cannot be fulfilled immediately
+            inventoryFullyCommitted = false;
+            logger.error("PAYMENT_RECEIVED_INVENTORY_UNAVAILABLE", "payment", {
+              merchantTransactionId,
+              orderNumber: order.orderNumber,
+              sku: item.sku,
+              error: String(reacquireError?.message || reacquireError),
+              source,
+            });
+
+            // Only transition to PAYMENT_RECEIVED if still on CONFIRMED path
+            if (order.orderStatus === "CONFIRMED") {
+              order.orderStatus = "PAYMENT_RECEIVED";
+              order.statusHistory.push({
+                status: "PAYMENT_RECEIVED",
+                timestamp: new Date(),
+                notes: `Payment confirmed but inventory unavailable for SKU ${item.sku}. Admin must allocate stock or initiate refund. (${source})`,
+              });
+              await order.save(session ? { session } : undefined);
+            }
+          }
+        }
       }
 
-      logger.info("Payment confirmed", "payment", { merchantTransactionId, source });
+      logger.info("Payment confirmed", "payment", {
+        merchantTransactionId,
+        source,
+        inventoryFullyCommitted,
+        orderStatus: order.orderStatus,
+      });
       const doneOrder: any = await Order.findById(payment.orderId).lean().catch(() => null);
       if (doneOrder) {
         const { NotificationService } = await import("../notification/notification.service");
@@ -86,8 +215,43 @@ export class PaymentService {
           total: `₹${doneOrder.pricingSnapshot?.grandTotal}`,
         });
       }
-      return { payment: payment.toObject(), duplicate: false };
+      return { payment: payment.toObject(), duplicate: false, latePaymentRefund };
     });
+
+    // ── FINDING-02: Execute refund AFTER transaction commits ──
+    // The provider checks DB for PAID status, which is only visible after tx commit.
+    if (result.latePaymentRefund) {
+      const r = result.latePaymentRefund;
+      try {
+        const provider = getPaymentProvider(r.method);
+        await provider.refundPayment({
+          paymentId: r.paymentId,
+          orderId: r.orderId,
+          amount: r.amount,
+          reason: r.reason,
+        });
+        await Payment.findOneAndUpdate(
+          { merchantTransactionId },
+          { $set: { "refundDetails.status": "REFUND_PENDING", "refundDetails.refundId": `LATE_${merchantTransactionId}` } }
+        );
+        logger.warn("PAYMENT_RECEIVED_LATE_AUTO_REFUND_INITIATED", "payment", { merchantTransactionId, source });
+      } catch (e: any) {
+        logger.error("PAYMENT_RECEIVED_LATE_REFUND_FAILED", "payment", {
+          merchantTransactionId,
+          error: String(e?.message || e),
+          source,
+        });
+        await Payment.findOneAndUpdate(
+          { merchantTransactionId },
+          { $set: { "refundDetails.status": "FAILED" } }
+        );
+        await Order.findOneAndUpdate(
+          { _id: r.orderId },
+          { $push: { statusHistory: { status: "PAYMENT_RECEIVED", timestamp: new Date(), notes: `Auto-refund failed: ${String(e?.message || e)}. Manual intervention required.` } } }
+        );
+      }
+    }
+    return result;
   }
 
   static async markFailed(merchantTransactionId: string, source: string) {
@@ -103,21 +267,8 @@ export class PaymentService {
       const order: any = await Order.findById(payment.orderId, null, session ? { session } : undefined);
       if (order && order.paymentInfo?.status !== "PAID") {
         order.paymentInfo = { ...(order.paymentInfo || {}), status: "FAILED" };
-        if (order.orderStatus === "PENDING_PAYMENT") {
-          order.orderStatus = "CANCELLED";
-          order.statusHistory.push({ status: "CANCELLED", timestamp: new Date(), notes: `Payment failed (${source})` });
-        }
+        order.statusHistory.push({ status: order.orderStatus, timestamp: new Date(), notes: `Payment failed (${source}). Order retained for retry.` });
         await order.save(session ? { session } : undefined);
-        for (const item of order.items) {
-          await InventoryService.release({
-            productId: String(item.productId),
-            sku: item.sku,
-            quantity: item.quantity,
-            orderId: String(order._id),
-            operationId: `REL_${order.orderNumber}_${String(item.sku).toUpperCase()}`,
-            reason: `Payment failed ${order.orderNumber}`,
-          });
-        }
       }
       const failedOrder = await Order.findById(payment.orderId).lean().catch(() => null) as any;
       if (failedOrder) {
@@ -147,7 +298,7 @@ export class PaymentService {
       return { order, payment, status: payment.status, providerUnreachable: true };
     }
     if (live.status === "PAID" && payment.status !== "PAID") {
-      await this.confirmPaid(payment.merchantTransactionId, "sync");
+      await this.confirmPaid(payment.merchantTransactionId, "sync", Math.round((live.amount || 0) * 100));
     } else if (live.status === "FAILED" && !["PAID", "FAILED"].includes(payment.status)) {
       await this.markFailed(payment.merchantTransactionId, "sync");
     }

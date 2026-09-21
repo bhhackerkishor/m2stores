@@ -3,6 +3,7 @@ import { ProductCard } from "@/components/storefront/ProductCard";
 import { ProductFilters } from "@/components/storefront/ProductFilters";
 import { CategoryMegaMenu } from "@/components/layout/CategoryMegaMenu";
 import { CatalogService } from "@/services/catalog.service";
+import { getPublicSettings } from "@/lib/public-settings";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -63,11 +64,12 @@ export default async function CategoryPage({
     attrs: parseAttrs(sp),
   };
 
-  const [result, brands, allCategories, facets] = await Promise.all([
+  const [result, brands, allCategories, facets, pubSettings] = await Promise.all([
     CatalogService.listProducts({ ...baseFilters, page: sp.page ? parseInt(sp.page) : 1, limit: 12 }),
     CatalogService.getBrands(true),
     CatalogService.getCategories(true),
     CatalogService.getFacets(baseFilters).catch(() => ({ attributes: {} as Record<string, Array<{ value: string; count: number }>> })),
+    getPublicSettings(),
   ]);
 
   const breadcrumb = {
@@ -116,7 +118,7 @@ export default async function CategoryPage({
             </details>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 content-start">
             {result.items.map((product: any) => (
-              <ProductCard key={String(product._id)} product={JSON.parse(JSON.stringify(product))} />
+              <ProductCard key={String(product._id)} product={JSON.parse(JSON.stringify(product))} deliveryDays={pubSettings.deliveryDays} />
             ))}
             {result.items.length === 0 && (
               <div className="col-span-full text-center py-16 bg-white rounded-xl border border-surface-200">

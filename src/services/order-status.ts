@@ -5,24 +5,25 @@ import type { OrderStatus } from "@/models/Order";
  * Customer transitions are restricted; admin can force ANY non-terminal transition.
  */
 const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING_PAYMENT: ["CONFIRMED", "CANCELLED"],
+  PENDING_PAYMENT: ["CONFIRMED", "CANCELLED", "PAYMENT_RECEIVED"],
   CONFIRMED: ["PROCESSING", "CANCELLED"],
   PROCESSING: ["PACKED", "CANCELLED"],
   PACKED: ["SHIPPED", "CANCELLED"],
   SHIPPED: ["OUT_FOR_DELIVERY"],
   OUT_FOR_DELIVERY: ["DELIVERED"],
   DELIVERED: ["RETURN_REQUESTED"],
-  CANCELLED: [],
+  CANCELLED: ["PAYMENT_RECEIVED"],
   RETURN_REQUESTED: ["RETURN_APPROVED", "RETURN_REJECTED"],
   RETURN_APPROVED: ["RETURNED"],
   RETURN_REJECTED: [],
   RETURNED: ["REFUND_PENDING"],
   REFUND_PENDING: ["REFUNDED"],
   REFUNDED: [],
+  PAYMENT_RECEIVED: ["REFUND_PENDING", "CONFIRMED"],
 };
 
 /** Terminal states — nothing can transition out of these. */
-const TERMINAL: OrderStatus[] = ["CANCELLED", "RETURN_REJECTED", "REFUNDED"];
+const TERMINAL: OrderStatus[] = ["RETURN_REJECTED", "REFUNDED"];
 
 export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
   return (TRANSITIONS[from] || []).includes(to);
@@ -72,6 +73,7 @@ export function describeStatus(s: OrderStatus): string {
     RETURNED: "Returned",
     REFUND_PENDING: "Refund pending",
     REFUNDED: "Refunded",
+    PAYMENT_RECEIVED: "Payment received - requires reconciliation",
   };
   return labels[s] || s;
 }
