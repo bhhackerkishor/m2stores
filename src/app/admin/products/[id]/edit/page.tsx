@@ -760,7 +760,7 @@ export default function AdminProductEditPage({ params }: PageProps) {
                   <div key={i} className="p-3 bg-surface-50 dark:bg-surface-800/50 rounded-lg border border-surface-200 dark:border-surface-700 space-y-2">
                     <div className="flex gap-2">
                       <img
-                        src={img.url || "https://via.placeholder.com/80"}
+                        src={img.url || "/images/placeholder-product.svg"}
                         alt={img.alt || "Preview"}
                         className="w-14 h-14 object-cover rounded-md bg-surface-100 dark:bg-surface-800 shrink-0 border border-surface-200 dark:border-surface-700"
                       />

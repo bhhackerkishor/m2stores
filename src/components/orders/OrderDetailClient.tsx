@@ -11,7 +11,6 @@ import { Invoice } from "@/components/orders/Invoice";
 import { formatPrice } from "@/lib/utils";
 import { timelineFor, customerCanCancel } from "@/services/order-status";
 import { 
-  Printer, 
   XCircle, 
   Package, 
   MapPin, 
@@ -166,34 +165,8 @@ export function OrderDetailClient({ order, deliveryDays = 3 }: { order: any; del
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="min-h-screen bg-surface-50/50 pb-16">
-      {/* Printable Area Target Class */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #printable-invoice, #printable-invoice * {
-            visibility: visible;
-          }
-          #printable-invoice {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 20px;
-            box-shadow: none !important;
-            border: none !important;
-          }
-        }
-      `}</style>
-
       {/* Screen-Only Container */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 print:hidden">
         {/* Navigation Breadcrumb */}
@@ -233,14 +206,6 @@ export function OrderDetailClient({ order, deliveryDays = 3 }: { order: any; del
             </div>
 
             <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                onClick={handlePrint}
-                className="border-surface-300 font-semibold text-surface-700 hover:bg-surface-50"
-              >
-                <Printer className="w-4 h-4 mr-2" /> Print Invoice
-              </Button>
-
               {cancellable && (
                 <Button 
                   variant="destructive" 
@@ -282,7 +247,7 @@ export function OrderDetailClient({ order, deliveryDays = 3 }: { order: any; del
                 )}
               </div>
 
-              <OrderTimeline placedAt={tl.placedAt} steps={tl.steps} terminal={tl.terminal} />
+              <OrderTimeline placedAt={tl.placedAt} steps={tl.steps} terminal={tl.terminal} events={order.shippingDetails?.events} />
             </Card>
 
             {/* Live Delivery Tracking Card */}
@@ -357,7 +322,7 @@ export function OrderDetailClient({ order, deliveryDays = 3 }: { order: any; del
                   <div key={i} className="py-4 first:pt-0 last:pb-0 flex gap-4 items-center">
                     <div className="w-20 h-20 bg-surface-100 rounded-xl overflow-hidden shrink-0 border border-surface-200 relative">
                       <Image 
-                        src={it.imageSnapshot || "https://via.placeholder.com/80x80"} 
+                        src={it.imageSnapshot || "/images/placeholder-product.svg"} 
                         alt={it.nameSnapshot} 
                         fill 
                         className="object-cover"

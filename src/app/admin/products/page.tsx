@@ -55,7 +55,7 @@ export default async function AdminProductsPage() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <img
-                      src={product.images?.[0]?.url || "https://via.placeholder.com/60x60"}
+                      src={product.images?.[0]?.url || "/images/placeholder-product.svg"}
                       alt={product.name}
                       className="w-12 h-12 rounded-lg object-cover bg-surface-100 dark:bg-surface-800"
                     />

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/providers/ToastProvider";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { User, Shield, MapPin, LogOut, ChevronRight, Sun, Moon } from "lucide-react";
@@ -42,7 +41,6 @@ export default function ProfileClientHub({ user }: ProfileClientHubProps) {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-100 truncate">{user.name}</h1>
           <p className="text-sm text-surface-500 dark:text-surface-400 truncate">{user.email}</p>
-          <Badge variant={user.role === "ADMIN" ? "info" : "default"} size="sm" className="mt-1">{user.role}</Badge>
         </div>
       </div>
 

@@ -21,7 +21,7 @@ export function ProductGallery({ images }: ProductGalleryProps) {
     <div className="space-y-4">
       <div className="relative w-full h-96 rounded-xl overflow-hidden bg-surface-100 dark:bg-surface-800">
         <Image
-          src={images[selectedIndex]?.url || "https://via.placeholder.com/800x800"}
+          src={images[selectedIndex]?.url || "/images/placeholder-product.svg"}
           alt={images[selectedIndex]?.alt || `Product image ${selectedIndex + 1}`}
           fill
           priority

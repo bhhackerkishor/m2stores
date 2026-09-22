@@ -142,7 +142,7 @@ export default function CartPage() {
             >
               <Link href={`/product/${item.slug}`} className="shrink-0">
                 <Image
-                  src={item.image || "https://via.placeholder.com/120x120"}
+                  src={item.image || "/images/placeholder-product.svg"}
                   alt={item.name}
                   width={120}
                   height={120}

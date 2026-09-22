@@ -340,7 +340,7 @@ export default function CheckoutPage() {
             <div className="space-y-3">
               {quote.items.map((it: any) => (
                 <div key={it.sku} className="flex gap-3 items-center">
-                  <Image src={it.image || "https://via.placeholder.com/80x80"} alt={it.name} width={64} height={64} className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover bg-surface-100" />
+                  <Image src={it.image || "/images/placeholder-product.svg"} alt={it.name} width={64} height={64} className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg object-cover bg-surface-100" />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{it.name}</p>
                     <p className="text-xs text-surface-500 font-mono">{it.sku} × {it.quantity}</p>

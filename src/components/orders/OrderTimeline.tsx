@@ -1,4 +1,4 @@
-import { Check, Circle } from "lucide-react";
+import { Check, Circle, MapPin } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 interface Step {
@@ -8,13 +8,23 @@ interface Step {
   done: boolean;
 }
 
+interface ShippingEvent {
+  status: string;
+  location?: string;
+  city?: string;
+  timestamp: string | Date;
+  note?: string;
+}
+
 export function OrderTimeline({ 
   steps, 
-  terminal 
+  terminal,
+  events 
 }: { 
   placedAt: string | Date | null; 
   steps: Step[]; 
-  terminal: string 
+  terminal: string;
+  events?: ShippingEvent[];
 }) {
   const isCancelled = terminal === "CANCELLED";
 
@@ -93,6 +103,45 @@ export function OrderTimeline({
           );
         })}
       </div>
+
+      {/* Location Events Timeline (below the main timeline) */}
+      {events && events.length > 0 && (
+        <div className="mt-6 pt-4 border-t border-surface-100">
+          <p className="text-xs font-semibold text-surface-700 mb-3 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-blue-500" />
+            Shipment Tracking History
+          </p>
+          <div className="space-y-3">
+            {[...events].reverse().map((ev, i) => (
+              <div key={i} className="flex gap-3 text-xs relative">
+                {/* Vertical connector line */}
+                {i < events.length - 1 && (
+                  <div className="absolute left-[5px] top-5 w-0.5 h-full bg-surface-200" />
+                )}
+                <div className={`w-3 h-3 rounded-full shrink-0 mt-0.5 ${
+                  i === 0 ? "bg-blue-500 ring-2 ring-blue-200" : "bg-surface-300"
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-surface-800">{ev.status}</span>
+                    {ev.location && (
+                      <span className="inline-flex items-center gap-0.5 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                        <MapPin className="w-2.5 h-2.5" />
+                        {ev.location}{ev.city ? `, ${ev.city}` : ""}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-surface-400 font-mono mt-0.5">
+                    {new Date(ev.timestamp).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}{" "}
+                    {new Date(ev.timestamp).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                  {ev.note && <p className="text-[10px] text-surface-500 mt-0.5">{ev.note}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

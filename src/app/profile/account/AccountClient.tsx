@@ -9,7 +9,7 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { User, Save } from "lucide-react";
 
 interface AccountClientProps {
-  user: { name: string; email: string; phone: string; role: string };
+  user: { name: string; email: string; phone: string };
 }
 
 export default function AccountClient({ user }: AccountClientProps) {
@@ -85,10 +85,6 @@ export default function AccountClient({ user }: AccountClientProps) {
               placeholder="9876543210"
               maxLength={13}
             />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1.5 uppercase tracking-wider">Role</label>
-            <Input value={user.role} disabled className="opacity-60 cursor-not-allowed" />
           </div>
           <div className="flex justify-end pt-2">
             <Button type="submit" isLoading={saving}>

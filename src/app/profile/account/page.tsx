@@ -17,7 +17,6 @@ export default async function AccountPage() {
     name: user.name || "",
     email: user.email || "",
     phone: user.phone || "",
-    role: user.role || "USER",
   };
 
   return <AccountClient user={data} />;

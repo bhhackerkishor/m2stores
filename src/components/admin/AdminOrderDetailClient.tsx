@@ -200,7 +200,7 @@ export function AdminOrderDetailClient({ order, payment }: { order: any; payment
         <div className="space-y-6">
           <Card>
             <h3 className="font-semibold mb-4">Fulfillment Timeline</h3>
-            <OrderTimeline placedAt={tl.placedAt} steps={tl.steps} terminal={tl.terminal} />
+            <OrderTimeline placedAt={tl.placedAt} steps={tl.steps} terminal={tl.terminal} events={order.shippingDetails?.events} />
           </Card>
           <Invoice order={order} />
           {payment && (

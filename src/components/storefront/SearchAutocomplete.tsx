@@ -126,7 +126,7 @@ export function SearchAutocomplete() {
               onMouseDown={() => setShowResults(false)}
             >
               <Image
-                src={result.images?.[0]?.url || "https://via.placeholder.com/60x60"}
+                src={result.images?.[0]?.url || "/images/placeholder-product.svg"}
                 alt={result.name}
                 width={48}
                 height={48}

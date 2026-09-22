@@ -67,7 +67,7 @@ export default function WishlistPage() {
             <Link href={`/product/${item.slug}`}>
               <div className="relative aspect-square bg-surface-100 dark:bg-surface-800">
                 <Image
-                  src={item.image || "https://via.placeholder.com/300x300"}
+                  src={item.image || "/images/placeholder-product.svg"}
                   alt={item.name}
                   fill
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

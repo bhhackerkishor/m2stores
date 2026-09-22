@@ -1,14 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { CartProvider } from "@/components/providers/CartProvider";
 import { WishlistProvider } from "@/components/providers/WishlistProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -65,11 +62,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   >
                     Skip to content
                   </a>
-                  <Navbar />
-                  
+
                   <main id="main-content" className="flex-1">{children}</main>
-                  <Footer/>
-                  <MobileBottomNav />
                 </WishlistProvider>
               </CartProvider>
             </AuthProvider>

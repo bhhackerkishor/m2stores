@@ -28,7 +28,7 @@ export function RecentlyViewed({ excludeSlug }: { excludeSlug?: string }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {items.map((p) => (
           <Link key={p._id} href={`/product/${p.slug}`} className="bg-white rounded-xl border border-surface-200 p-3 hover:shadow-card-hover transition-shadow">
-            <Image src={p.images?.[0]?.url || "https://via.placeholder.com/300x300"} alt={p.name} width={300} height={300} className="w-full h-32 object-cover rounded-lg mb-2" loading="lazy" />
+            <Image src={p.images?.[0]?.url || "/images/placeholder-product.svg"} alt={p.name} width={300} height={300} className="w-full h-32 object-cover rounded-lg mb-2" loading="lazy" />
             <p className="text-sm font-medium line-clamp-2 min-h-[2.5rem]">{p.name}</p>
             <p className="font-bold text-sm mt-1">{formatPrice(p.salePrice || p.basePrice)}</p>
           </Link>

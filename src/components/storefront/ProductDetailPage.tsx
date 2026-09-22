@@ -68,7 +68,6 @@ export function ProductDetailPage({ product, deliveryDays = 3 }: ProductPageProp
 
   const resolvedSku = selectedSku || (product.hasVariants ? product.variants[0]?.sku : product.baseSKU) || "";
   const wished = resolvedSku ? isWished(resolvedSku) : false;
-  console.log(product)
   const handleAddToCart = async (buyNow = false) => {
     if (product.hasVariants && !selectedSku) {
       setNotice("Please select a variant first.");
