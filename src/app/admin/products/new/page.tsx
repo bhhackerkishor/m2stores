@@ -313,14 +313,15 @@ export default function AdminProductNewPage() {
     const payload = {
       ...formData,
       description: formData.description || formData.name,
-      categoryId: formData.categoryId || null,
-      subcategoryId: formData.subcategoryId || null,
-      brandId: formData.brandId || null,
+      categoryId: formData.categoryId || undefined,
+      subcategoryId: formData.subcategoryId || undefined,
+      brandId: formData.brandId || undefined,
       variants: formData.hasVariants
         ? formData.variants
             .filter((v) => v.sku && v.price)
             .map((v) => ({ ...v, sku: v.sku.toUpperCase() }))
         : [],
+      specifications: formData.specifications.filter((s) => s.group.trim() && s.key.trim() && s.value.trim()),
     };
 
     try {

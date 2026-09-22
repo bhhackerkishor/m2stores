@@ -1,17 +1,33 @@
 import { z } from "zod";
 
+// Optional ObjectId refs: admin forms send null/"" when cleared — normalize to undefined.
+const optionalRef = z.preprocess(
+  (v) => (v === null || v === "" ? undefined : v),
+  z.string().optional()
+);
+
+const productImageSchema = z.object({
+  url: z.string().min(1),
+  publicId: z.string().min(1),
+  alt: z.string().optional().default(""),
+  isPrimary: z.boolean().optional().default(false),
+});
+
 export const createProductSchema = z.object({
   name: z.string().min(3).max(200),
   slug: z.string().min(3).max(200),
   description: z.string().min(10),
   shortDescription: z.string().max(300).optional(),
   categoryId: z.string(),
-  brandId: z.string().optional(),
+  subcategoryId: optionalRef,
+  brandId: optionalRef,
+  images: z.array(productImageSchema).optional().default([]),
   basePrice: z.number().min(0),
   salePrice: z.number().min(0).optional(),
   costPrice: z.number().min(0).optional(),
   taxRate: z.number().min(0).max(100).default(18),
   hasVariants: z.boolean().default(false),
+  baseSKU: z.string().max(100).optional(),
   variants: z
     .array(
       z.object({
@@ -28,6 +44,15 @@ export const createProductSchema = z.object({
   isFeatured: z.boolean().default(false),
   isTrending: z.boolean().default(false),
   isBestseller: z.boolean().default(false),
+  weight: z.number().min(0).optional(),
+  dimensions: z
+    .object({
+      length: z.number().min(0).optional().default(0),
+      width: z.number().min(0).optional().default(0),
+      height: z.number().min(0).optional().default(0),
+    })
+    .optional(),
+  warranty: z.string().max(500).optional(),
   returnPolicyDays: z.number().min(0).default(7),
   seo: z
     .object({

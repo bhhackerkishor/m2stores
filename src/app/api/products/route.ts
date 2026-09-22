@@ -51,10 +51,15 @@ export async function POST(request: NextRequest) {
     const { requirePermission } = await import("@/lib/auth-server");
     const session = await requirePermission("products.write");
     const body = await request.json();
+    for (const k of ["categoryId", "subcategoryId", "brandId"] as const) {
+      if (body?.[k] === null || body?.[k] === "") body[k] = undefined;
+    }
     const parsed = createProductSchema.safeParse(body);
     if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      const where = first?.path?.length ? `${first.path.join(".")}: ` : "";
       return NextResponse.json(
-        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Invalid product data", parsed.error.flatten()),
+        errorResponse("VALIDATION_ERROR", `${where}${first?.message || "Invalid product data"}`, parsed.error.flatten()),
         { status: 400 }
       );
     }

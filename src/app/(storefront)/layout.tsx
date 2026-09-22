@@ -1,15 +1,9 @@
 import { ReactNode } from "react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
+// Pass-through: customer chrome (Navbar/Footer/MobileBottomNav) is rendered
+// by StorefrontChrome in the root layout so it covers every customer page.
+// Keeping this layout empty avoids double-rendering chrome for any future
+// routes placed inside the (storefront) group.
 export default function StorefrontLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="flex-1 pb-16 md:pb-0">{children}</div>
-      <Footer />
-      <MobileBottomNav />
-    </div>
-  );
+  return <>{children}</>;
 }

@@ -285,9 +285,14 @@ export default function AdminProductEditPage({ params }: PageProps) {
 
     const payload = {
       ...formData,
-      categoryId: formData.categoryId || null,
-      subcategoryId: formData.subcategoryId || null,
-      brandId: formData.brandId || null,
+      // Omit cleared refs (undefined keys are dropped by JSON.stringify);
+      // server also normalizes null/"" defensively.
+      categoryId: formData.categoryId || undefined,
+      subcategoryId: formData.subcategoryId || undefined,
+      brandId: formData.brandId || undefined,
+      // Drop incomplete variant/spec rows so nested required fields can't fail validation.
+      variants: formData.variants.filter((v) => v.sku && v.sku.trim() && v.price !== undefined && v.price !== null),
+      specifications: formData.specifications.filter((s) => s.group.trim() && s.key.trim() && s.value.trim()),
     };
 
     try {

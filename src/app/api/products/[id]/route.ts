@@ -41,15 +41,27 @@ export async function PUT(
     await connectDB();
     const { id } = await params;
     const body = await request.json();
+    // Defensive: normalize cleared refs (client may send null) before validation.
+    for (const k of ["categoryId", "subcategoryId", "brandId"] as const) {
+      if (body?.[k] === null || body?.[k] === "") body[k] = undefined;
+    }
     const parsed = updateProductSchema.safeParse(body);
     if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      const where = first?.path?.length ? `${first.path.join(".")}: ` : "";
       return NextResponse.json(
-        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Invalid product data"),
+        errorResponse("VALIDATION_ERROR", `${where}${first?.message || "Invalid product data"}`, parsed.error.flatten()),
         { status: 400 }
       );
     }
 
-    const updatedProduct = await Product.findByIdAndUpdate(id, parsed.data, {
+    // Only apply keys the client actually sent — never let schema defaults
+    // (status, taxRate, images, ...) clobber stored values on partial updates.
+    const update: Record<string, unknown> = {};
+    for (const k of Object.keys(body)) {
+      if (k in parsed.data) update[k] = (parsed.data as Record<string, unknown>)[k];
+    }
+    const updatedProduct = await Product.findByIdAndUpdate(id, update, {
       new: true,
       runValidators: true,
     });

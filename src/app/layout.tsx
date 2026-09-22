@@ -6,6 +6,7 @@ import { CartProvider } from "@/components/providers/CartProvider";
 import { WishlistProvider } from "@/components/providers/WishlistProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ToastProvider } from "@/components/providers/ToastProvider";
+import { StorefrontChrome } from "@/components/layout/StorefrontChrome";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -63,7 +64,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     Skip to content
                   </a>
 
-                  <main id="main-content" className="flex-1">{children}</main>
+                  <main id="main-content" className="flex-1">
+                    <StorefrontChrome>{children}</StorefrontChrome>
+                  </main>
                 </WishlistProvider>
               </CartProvider>
             </AuthProvider>
