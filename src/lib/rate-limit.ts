@@ -1,7 +1,11 @@
 /**
- * Edge-safe sliding-window rate limiter (per-instance memory).
- * For multi-instance production, swap the store with Redis (same interface).
+ * Edge-safe sliding-window rate limiter.
+ * Uses Upstash Redis when UPSTASH_REDIS_REST_URL is configured (shared across
+ * all Vercel serverless instances), otherwise falls back to per-instance memory.
  */
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
 interface Bucket {
   hits: number[];
 }
@@ -24,7 +28,31 @@ export interface RateLimit {
   limit: number;
 }
 
-export function checkRateLimit(namespace: string, key: string, limit: number, windowMs: number, now = Date.now()): RateLimit {
+// ── Upstash (production-grade, shared across instances) ──
+const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const useUpstash = Boolean(upstashUrl && upstashToken);
+
+const upstashLimiters = new Map<string, Ratelimit>();
+
+function getUpstashLimiter(namespace: string, limit: number, windowMs: number): Ratelimit {
+  const key = `${namespace}:${limit}:${windowMs}`;
+  let limiter = upstashLimiters.get(key);
+  if (!limiter) {
+    const redis = new Redis({ url: upstashUrl!, token: upstashToken! });
+    limiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(limit, `${windowMs} ms`),
+      analytics: false,
+      prefix: `m2s:${namespace}`,
+    });
+    upstashLimiters.set(key, limiter);
+  }
+  return limiter;
+}
+
+// ── In-memory fallback (per-instance, dev/test) ──
+function checkRateLimitMemory(namespace: string, key: string, limit: number, windowMs: number, now = Date.now()): RateLimit {
   const store = storeFor(namespace);
   let bucket = store.get(key);
   if (!bucket) {
@@ -44,6 +72,30 @@ export function checkRateLimit(namespace: string, key: string, limit: number, wi
   }
   bucket.hits.push(now);
   return { allowed: true, remaining: limit - bucket.hits.length, resetMs: windowMs, limit };
+}
+
+export async function checkRateLimit(namespace: string, key: string, limit: number, windowMs: number): Promise<RateLimit> {
+  if (useUpstash) {
+    try {
+      const limiter = getUpstashLimiter(namespace, limit, windowMs);
+      const result = await limiter.limit(key);
+      return {
+        allowed: result.success,
+        remaining: result.remaining,
+        resetMs: result.reset ? result.reset - Date.now() : windowMs,
+        limit,
+      };
+    } catch {
+      // Upstash unreachable — fall back to in-memory to avoid blocking all traffic
+      return checkRateLimitMemory(namespace, key, limit, windowMs);
+    }
+  }
+  return checkRateLimitMemory(namespace, key, limit, windowMs);
+}
+
+/** Synchronous version for middleware (uses in-memory only; Upstash is async). */
+export function checkRateLimitSync(namespace: string, key: string, limit: number, windowMs: number, now = Date.now()): RateLimit {
+  return checkRateLimitMemory(namespace, key, limit, windowMs, now);
 }
 
 export function clientIp(request: Request): string {
@@ -70,4 +122,5 @@ export const LIMITS = {
 // Test-only reset
 export function __resetRateLimits() {
   stores.clear();
+  upstashLimiters.clear();
 }

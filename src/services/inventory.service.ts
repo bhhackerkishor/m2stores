@@ -397,7 +397,11 @@ export class InventoryService {
     const { productId, sku: rawSku, quantity, orderId, reason } = input;
     const sku = rawSku.toUpperCase();
     await connectDB();
-    const updated = await InventoryState.findOneAndUpdate({ productId, sku }, { $inc: { stock: quantity } }, { new: true });
+    const updated = await InventoryState.findOneAndUpdate(
+      { productId, sku },
+      { $inc: { stock: quantity } },
+      { new: true }
+    );
     if (!updated) throw new AppError(`Inventory state not found for ${sku}`, 404, "INVENTORY_NOT_FOUND");
     await InventoryOperation.create({
       operationId: `RST_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,

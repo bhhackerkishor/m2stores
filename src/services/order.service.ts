@@ -68,9 +68,30 @@ export class OrderService {
     if (isAdmin ? !isAdminTransitionAllowed(from, to) : !canTransition(from, to)) {
       throw new InvalidStateTransitionError(from, to);
     }
+
+    // Atomic status update with condition to prevent concurrent overwrites (FINDING-07)
+    const result = await Order.findOneAndUpdate(
+      { _id: order._id, orderStatus: from },
+      {
+        $set: { orderStatus: to },
+        $push: { statusHistory: { status: to, timestamp: new Date(), updatedBy: actor.id as any, notes: actor.notes } },
+      },
+      { new: true, session: session as any }
+    );
+
+    if (!result) {
+      // Status changed between pre-read and atomic update — conflict
+      const current: any = await Order.findById(order._id).lean();
+      throw new AppError(
+        `Order status changed concurrently from ${from} to ${current?.orderStatus}. Please retry.`,
+        409,
+        "CONCURRENT_CONFLICT"
+      );
+    }
+
+    // Sync the in-memory order object with the atomic update result
     order.orderStatus = to;
-    order.statusHistory.push({ status: to, timestamp: new Date(), updatedBy: actor.id as any, notes: actor.notes });
-    await order.save(session ? { session } : undefined);
+    order.statusHistory = result.statusHistory;
     return { duplicate: false };
   }
 
@@ -145,8 +166,12 @@ export class OrderService {
       }
 
       await this.applyTransition(o, "CANCELLED", { id: actorUserId, notes: reason }, session as any);
-      o.cancellation = { reason, cancelledAt: new Date(), cancelledBy: actorUserId as any, refundStatus } as any;
-      await o.save(session ? { session } : undefined);
+      // Atomic update for cancellation metadata (applyTransition already set orderStatus)
+      await Order.findOneAndUpdate(
+        { _id: o._id },
+        { $set: { cancellation: { reason, cancelledAt: new Date(), cancelledBy: actorUserId as any, refundStatus } } },
+        session ? { session } : undefined
+      );
 
       // Release coupon usage so limits aren't burned by cancelled orders
       if (o.pricingSnapshot?.couponCode) {
@@ -195,12 +220,18 @@ export class OrderService {
    * Admin fulfillment transition (PROCESSING/PACKED/SHIPPED/...).
    * On SHIPPED for COD/reserved lines, commits inventory (stock leaves warehouse).
    * Tracking number required for SHIPPED.
+   *
+   * FIX (FINDING-07): Uses atomic findOneAndUpdate with status check to prevent
+   * race conditions between concurrent admin requests.
+   *
+   * FIX (FINDING-08): SHIPPED→SHIPPED is no longer a status transition.
+   * Location updates use $push on shippingDetails.events instead.
    */
   static async adminTransition(
     orderNumber: string,
     to: OrderStatus,
     adminId: string,
-    opts?: { notes?: string; trackingNumber?: string; courier?: string }
+    opts?: { notes?: string; trackingNumber?: string; courier?: string; location?: string }
   ) {
     await connectDB();
     if (to === "CANCELLED") {
@@ -210,6 +241,20 @@ export class OrderService {
       const o: any = await Order.findOne({ orderNumber }, null, session ? { session } : undefined);
       if (!o) throw new AppError("Order not found", 404, "NOT_FOUND");
       const from = o.orderStatus as OrderStatus;
+
+      // Location update for already-shipped orders (no status change)
+      if (from === "SHIPPED" && to === "SHIPPED" && opts?.location) {
+        o.shippingDetails = {
+          ...(o.shippingDetails || {}),
+          events: [
+            ...(o.shippingDetails?.events || []),
+            { location: opts.location, timestamp: new Date(), notes: opts.notes || `Location update: ${opts.location}` },
+          ],
+        };
+        await o.save(session ? { session } : undefined);
+        logger.info("Order location updated", "order", { orderNumber, location: opts.location });
+        return { order: o.toObject(), duplicate: false, from };
+      }
 
       if (to === "SHIPPED") {
         if (!opts?.trackingNumber) throw new AppError("Tracking number is required to ship", 400, "TRACKING_REQUIRED");
@@ -231,7 +276,7 @@ export class OrderService {
           ...(o.shippingDetails || {}),
           courier: opts.courier || o.shippingDetails?.courier || "Manual",
           trackingNumber: opts.trackingNumber,
-          shippedAt: new Date(),
+          shippedAt: o.shippingDetails?.shippedAt || new Date(),
         };
       }
       if (to === "DELIVERED") {
@@ -246,6 +291,16 @@ export class OrderService {
       }
 
       const { duplicate } = await this.applyTransition(o, to, { id: adminId, notes: opts?.notes }, session as any, true);
+
+      // Persist shippingDetails changes made on the in-memory object before applyTransition
+      if (!duplicate && (to === "SHIPPED" || to === "DELIVERED")) {
+        await Order.findOneAndUpdate(
+          { _id: o._id },
+          { $set: { shippingDetails: o.shippingDetails } },
+          session ? { session } : undefined
+        );
+      }
+
       if (!duplicate) {
         try {
           await AuditLog.create(

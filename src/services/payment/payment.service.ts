@@ -47,12 +47,33 @@ export class PaymentService {
    *
    * FIX (FINDING-03): If inventory reservation expired during payment, attempts
    * atomic reacquire. Falls back to PAYMENT_RECEIVED for manual reconciliation.
+   *
+   * @param preloaded - Optional pre-fetched payment/order to avoid double-read
+   *   in webhook path. When provided, the transaction uses these objects directly,
+   *   eliminating the race window between the webhook handler's read and this
+   *   function's read.
    */
-  static async confirmPaid(merchantTransactionId: string, source: string, verifiedAmountPaise?: number) {
+  static async confirmPaid(
+    merchantTransactionId: string,
+    source: string,
+    verifiedAmountPaise?: number,
+    preloaded?: { payment?: any; order?: any; webhookLog?: { signature: string; rawBody: string; eventType: string } }
+  ) {
     await connectDB();
-    const payment: any = await Payment.findOne({ merchantTransactionId });
-    if (!payment) throw new AppError("Payment not found", 404, "NOT_FOUND");
+    const payment: any = preloaded?.payment ?? await Payment.findOne({ merchantTransactionId });
+    if (!payment) {
+      logger.warn("confirmPaid called for unknown transaction", "payment", { merchantTransactionId, source });
+      throw new AppError("Payment not found", 404, "NOT_FOUND");
+    }
     if (payment.status === "PAID") {
+      // Still mark webhook log as processed if provided (idempotent)
+      if (preloaded?.webhookLog) {
+        await Payment.updateOne(
+          { merchantTransactionId },
+          { $set: { "rawWebhookLogs.$[l].processed": true, "rawWebhookLogs.$[l].processedAt": new Date() } },
+          { arrayFilters: [{ "l.signature": preloaded.webhookLog.signature }] }
+        ).catch(() => {});
+      }
       logger.info("Duplicate confirmPaid ignored", "payment", { merchantTransactionId, source });
       return { payment: payment.toObject(), duplicate: true };
     }
@@ -206,6 +227,16 @@ export class PaymentService {
         inventoryFullyCommitted,
         orderStatus: order.orderStatus,
       });
+
+      // Mark webhook log as processed atomically inside the transaction
+      if (preloaded?.webhookLog) {
+        await Payment.updateOne(
+          { merchantTransactionId },
+          { $set: { "rawWebhookLogs.$[l].processed": true, "rawWebhookLogs.$[l].processedAt": new Date() } },
+          { arrayFilters: [{ "l.signature": preloaded.webhookLog.signature }], session: session as any }
+        ).catch(() => {});
+      }
+
       const doneOrder: any = await Order.findById(payment.orderId).lean().catch(() => null);
       if (doneOrder) {
         const { NotificationService } = await import("../notification/notification.service");

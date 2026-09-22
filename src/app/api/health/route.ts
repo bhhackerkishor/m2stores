@@ -20,10 +20,6 @@ export async function GET() {
     healthy = false;
   }
 
-  // Environment
-  checks.nodeEnv = process.env.NODE_ENV || "development";
-  checks.uptime = `${Math.floor(process.uptime())}s`;
-
   return NextResponse.json(
     { status: healthy ? "healthy" : "degraded", checks },
     { status: healthy ? 200 : 503 }

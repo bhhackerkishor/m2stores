@@ -19,7 +19,7 @@ async function main() {
     let blocked = 0;
     let last: any = null;
     for (let i = 0; i < LIMITS.auth.limit + 3; i++) {
-      const r = checkRateLimit("test-auth", "1.2.3.4", LIMITS.auth.limit, LIMITS.auth.windowMs);
+      const r = await checkRateLimit("test-auth", "1.2.3.4", LIMITS.auth.limit, LIMITS.auth.windowMs);
       last = r;
       if (r.allowed) allowed++;
       else blocked++;
@@ -35,7 +35,7 @@ async function main() {
     __resetRateLimits();
     let allowed = 0;
     for (let i = 0; i < 5; i++) {
-      const r = checkRateLimit("otp-send-id", "9999999999", LIMITS.otpSend.limit, LIMITS.otpSend.windowMs);
+      const r = await checkRateLimit("otp-send-id", "9999999999", LIMITS.otpSend.limit, LIMITS.otpSend.windowMs);
       if (r.allowed) allowed++;
     }
     if (allowed !== 3) throw new Error(`expected 3 OTP sends allowed, got ${allowed}`);

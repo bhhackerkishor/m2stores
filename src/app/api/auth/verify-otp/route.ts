@@ -13,7 +13,7 @@ import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
 export async function POST(request: NextRequest) {
   try {
     const ip = clientIp(request);
-    const ipLimit = checkRateLimit("otp-verify-ip", ip, LIMITS.otpVerify.limit, LIMITS.otpVerify.windowMs);
+    const ipLimit = await checkRateLimit("otp-verify-ip", ip, LIMITS.otpVerify.limit, LIMITS.otpVerify.windowMs);
     if (!ipLimit.allowed) {
       return NextResponse.json(errorResponse("RATE_LIMITED", "Too many verification attempts. Please try again later."), { status: 429 });
     }

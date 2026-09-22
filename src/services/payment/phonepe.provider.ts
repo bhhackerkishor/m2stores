@@ -243,12 +243,15 @@ const payload = {
         processed: false,
       });
       await payment.save();
-      const out: any = await PaymentService.confirmPaid(payment.merchantTransactionId, "webhook", decoded?.data?.amount);
-      await Payment.updateOne(
-        { merchantTransactionId },
-        { $set: { "rawWebhookLogs.$[l].processed": true, "rawWebhookLogs.$[l].processedAt": new Date() } },
-        { arrayFilters: [{ "l.signature": signature }] }
-      ).catch(() => {});
+      // Pass pre-loaded payment + webhook log to confirmPaid to eliminate
+      // the double-read race window (FINDING-03)
+      const preloadedOrder = await Order.findById(payment.orderId).lean();
+      const out: any = await PaymentService.confirmPaid(
+        payment.merchantTransactionId,
+        "webhook",
+        decoded?.data?.amount,
+        { payment, order: preloadedOrder, webhookLog: { signature, rawBody, eventType: decoded?.code || decoded?.event || "WEBHOOK" } }
+      );
       return { success: true, orderStatusUpdate: !out?.duplicate, paymentStatus: "PAID", merchantTransactionId };
     }
 

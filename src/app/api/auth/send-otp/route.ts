@@ -25,12 +25,12 @@ export async function POST(request: NextRequest) {
 
     // Per-identifier throttle: 3 sends / 10 min (brute-force + SMS cost protection)
     const idKey = identifier.toLowerCase();
-    const idLimit = checkRateLimit("otp-send-id", idKey, LIMITS.otpSend.limit, LIMITS.otpSend.windowMs);
+    const idLimit = await checkRateLimit("otp-send-id", idKey, LIMITS.otpSend.limit, LIMITS.otpSend.windowMs);
     if (!idLimit.allowed) {
       // Generic message — no enumeration, no timing oracle
       return NextResponse.json(successResponse({ message: "If an account exists, an OTP has been sent" }));
     }
-    const ipLimit = checkRateLimit("otp-send-ip", clientIp(request), LIMITS.otpSend.limit * 5, LIMITS.otpSend.windowMs);
+    const ipLimit = await checkRateLimit("otp-send-ip", clientIp(request), LIMITS.otpSend.limit * 5, LIMITS.otpSend.windowMs);
     if (!ipLimit.allowed) {
       return NextResponse.json(successResponse({ message: "If an account exists, an OTP has been sent" }));
     }
@@ -58,12 +58,11 @@ export async function POST(request: NextRequest) {
 
     logger.info("OTP generated", "auth", { userId: String(user._id) });
 
-    // Dev-only: expose OTP for testing. NEVER in production.
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.json(successResponse({ message: "OTP sent successfully" }));
+    // Dev-only: log OTP server-side for testing. NEVER expose in response.
+    if (process.env.NODE_ENV !== "production") {
+      logger.info(`OTP for ${identifier}: ${otp}`, "auth-dev");
     }
-    logger.info(`OTP for ${identifier}: ${otp}`, "auth-dev");
-    return NextResponse.json(successResponse({ message: "OTP sent successfully", otp }));
+    return NextResponse.json(successResponse({ message: "OTP sent successfully" }));
   } catch (error) {
     logger.error("Send OTP error", "auth", { error });
     return NextResponse.json(errorResponse("INTERNAL_ERROR", "Failed to send OTP"), { status: 500 });

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ip = clientIp(request);
-    const ipLimit = checkRateLimit("checkout", ip, LIMITS.checkout.limit, LIMITS.checkout.windowMs);
+    const ipLimit = await checkRateLimit("checkout", ip, LIMITS.checkout.limit, LIMITS.checkout.windowMs);
     if (!ipLimit.allowed) {
       return NextResponse.json(errorResponse("RATE_LIMITED", "Too many requests. Please try again shortly."), { status: 429 });
     }

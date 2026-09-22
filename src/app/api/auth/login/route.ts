@@ -13,7 +13,7 @@ import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
 export async function POST(request: NextRequest) {
   try {
     const ip = clientIp(request);
-    const ipLimit = checkRateLimit("auth-ip", ip, LIMITS.auth.limit, LIMITS.auth.windowMs);
+    const ipLimit = await checkRateLimit("auth-ip", ip, LIMITS.auth.limit, LIMITS.auth.windowMs);
     if (!ipLimit.allowed) {
       return NextResponse.json(errorResponse("RATE_LIMITED", "Too many login attempts. Please try again later."), { status: 429 });
     }
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Per-identifier brute-force guard (in addition to IP limit in middleware)
     const { checkRateLimit: check, LIMITS: L } = await import("@/lib/rate-limit");
-    const idLimit = check("auth-id", String(identifier).toLowerCase(), L.authIdentifier.limit, L.authIdentifier.windowMs);
+    const idLimit = await check("auth-id", String(identifier).toLowerCase(), L.authIdentifier.limit, L.authIdentifier.windowMs);
     if (!idLimit.allowed) {
       return NextResponse.json(errorResponse("INVALID_CREDENTIALS", "Invalid email/phone or password"), { status: 401 });
     }

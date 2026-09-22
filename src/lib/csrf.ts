@@ -1,6 +1,10 @@
 import crypto from "crypto";
 
-const CSRF_SECRET = process.env.JWT_SECRET || "csrf-fallback";
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET is required for CSRF protection. Set it in your environment variables.");
+}
+const CSRF_SECRET = process.env.JWT_SECRET;
+
 const CSRF_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
 
 /**
@@ -33,7 +37,6 @@ export function validateCsrfToken(token: string, maxAgeMs = CSRF_MAX_AGE_MS): bo
     return false;
   }
 }
-
 /**
  * Middleware helper: extract and validate CSRF from header.
  * For SameSite=Lax cookies + JSON body, CSRF is mitigated by:

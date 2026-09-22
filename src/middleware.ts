@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
+import { checkRateLimitSync, clientIp, LIMITS } from "@/lib/rate-limit";
 
 function securityHeaders(res: NextResponse): NextResponse {
   res.headers.set("X-Content-Type-Options", "nosniff");
@@ -21,6 +21,33 @@ function rateLimitedResponse(limit: { remaining: number; resetMs: number; limit:
   return securityHeaders(res);
 }
 
+/**
+ * Cryptographically verify JWT signature using Edge-compatible Web Crypto API.
+ * This prevents forged JWTs with arbitrary role claims from accessing admin routes.
+ */
+async function verifyJwtPayload(token: string): Promise<{ role?: string } | null> {
+  try {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) return null;
+
+    const [headerB64, payloadB64, sigB64] = token.split(".");
+    if (!headerB64 || !payloadB64 || !sigB64) return null;
+
+    const keyData = new TextEncoder().encode(secret);
+    const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+
+    const data = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+    const sigBytes = Uint8Array.from(atob(sigB64.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+
+    const valid = await crypto.subtle.verify("HMAC", cryptoKey, sigBytes, data);
+    if (!valid) return null;
+
+    return JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -28,29 +55,29 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api/")) {
     const ip = clientIp(request);
     if (pathname.startsWith("/api/auth/login") || pathname.startsWith("/api/auth/register")) {
-      const r = checkRateLimit("auth-ip", ip, LIMITS.auth.limit, LIMITS.auth.windowMs);
+      const r = checkRateLimitSync("auth-ip", ip, LIMITS.auth.limit, LIMITS.auth.windowMs);
       if (!r.allowed) return rateLimitedResponse(r);
     } else if (pathname.startsWith("/api/auth/send-otp") || pathname.startsWith("/api/auth/verify-otp") || pathname.startsWith("/api/auth/forgot-password")) {
-      const r = checkRateLimit("otp-ip", ip, LIMITS.otpVerify.limit, LIMITS.otpVerify.windowMs);
+      const r = checkRateLimitSync("otp-ip", ip, LIMITS.otpVerify.limit, LIMITS.otpVerify.windowMs);
       if (!r.allowed) return rateLimitedResponse(r);
     } else if (pathname.startsWith("/api/checkout/")) {
-      const r = checkRateLimit("checkout-ip", ip, LIMITS.checkout.limit, LIMITS.checkout.windowMs);
+      const r = checkRateLimitSync("checkout-ip", ip, LIMITS.checkout.limit, LIMITS.checkout.windowMs);
       if (!r.allowed) return rateLimitedResponse(r);
     } else if (pathname.startsWith("/api/payments/")) {
       // Webhooks must never be throttled into drops from the provider retrying —
       // use a generous bucket so only abusive floods trip.
       if (!pathname.includes("/webhook")) {
-        const r = checkRateLimit("payments-ip", ip, LIMITS.payments.limit, LIMITS.payments.windowMs);
+        const r = checkRateLimitSync("payments-ip", ip, LIMITS.payments.limit, LIMITS.payments.windowMs);
         if (!r.allowed) return rateLimitedResponse(r);
       }
     } else {
-      const r = checkRateLimit("api-ip", `${ip}:${pathname.split("/").slice(0, 4).join("/")}`, LIMITS.api.limit, LIMITS.api.windowMs);
+      const r = checkRateLimitSync("api-ip", `${ip}:${pathname.split("/").slice(0, 4).join("/")}`, LIMITS.api.limit, LIMITS.api.windowMs);
       if (!r.allowed) return rateLimitedResponse(r);
     }
   }
 
   // Allow public paths
-  const publicPaths = ["/login", "/register", "/verify-otp", "/forgot-password", "/api/auth/"];
+  const publicPaths = ["/login", "/register", "/verify-otp", "/forgot-password", "/api/auth/", "/api/health", "/api/csrf"];
   if (publicPaths.some((path) => pathname.startsWith(path))) {
     return securityHeaders(NextResponse.next());
   }
@@ -72,7 +99,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Admin-required routes
+  // Admin-required routes — cryptographically verify JWT signature
   if (pathname.startsWith("/admin")) {
     if (!isAuthenticated) {
       const url = request.nextUrl.clone();
@@ -80,14 +107,9 @@ export async function middleware(request: NextRequest) {
       url.searchParams.set("redirect", pathname);
       return securityHeaders(NextResponse.redirect(url));
     }
-    // Decode JWT to check role (without importing mongoose)
-    try {
-      const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString());
-      if (payload.role !== "ADMIN" && payload.role !== "SUPER_ADMIN") {
-        return securityHeaders(NextResponse.redirect(new URL("/", request.url)));
-      }
-    } catch {
-      return securityHeaders(NextResponse.redirect(new URL("/login", request.url)));
+    const payload = await verifyJwtPayload(token!);
+    if (!payload || (payload.role !== "ADMIN" && payload.role !== "SUPER_ADMIN")) {
+      return securityHeaders(NextResponse.redirect(new URL("/", request.url)));
     }
   }
 

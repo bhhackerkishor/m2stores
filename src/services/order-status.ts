@@ -9,7 +9,7 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   CONFIRMED: ["PROCESSING", "CANCELLED"],
   PROCESSING: ["PACKED", "CANCELLED"],
   PACKED: ["SHIPPED", "CANCELLED"],
-  SHIPPED: ["SHIPPED", "OUT_FOR_DELIVERY"],
+  SHIPPED: ["OUT_FOR_DELIVERY"],
   OUT_FOR_DELIVERY: ["DELIVERED"],
   DELIVERED: ["RETURN_REQUESTED"],
   CANCELLED: ["PAYMENT_RECEIVED"],
@@ -41,6 +41,8 @@ export function adminAllowedStatuses(): OrderStatus[] {
 export function isAdminTransitionAllowed(from: OrderStatus, to: OrderStatus): boolean {
   if (from === to) return false;
   if (TERMINAL.includes(from)) return false;
+  // SHIPPED→SHIPPED is handled separately as a location update, not a status transition
+  if (from === "SHIPPED" && to === "SHIPPED") return false;
   return true;
 }
 
