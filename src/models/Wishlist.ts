@@ -16,8 +16,8 @@ export interface IWishlist {
 
 const WishlistSchema = new Schema<IWishlist>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", sparse: true, unique: true },
-    guestSessionId: { type: String, sparse: true, unique: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User" },
+    guestSessionId: { type: String },
     items: [
       {
         productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
@@ -28,6 +28,10 @@ const WishlistSchema = new Schema<IWishlist>(
   },
   { timestamps: true }
 );
+
+// Partial unique indexes — never index missing/null (see Cart.ts).
+WishlistSchema.index({ userId: 1 }, { unique: true, partialFilterExpression: { userId: { $type: "objectId" } } });
+WishlistSchema.index({ guestSessionId: 1 }, { unique: true, partialFilterExpression: { guestSessionId: { $type: "string" } } });
 
 export const Wishlist =
   (mongoose.models.Wishlist as mongoose.Model<IWishlist> | undefined) ||

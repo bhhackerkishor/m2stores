@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/models/Product";
+import { InventoryService } from "@/services/inventory.service";
 import { updateProductSchema } from "@/validators/product";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
@@ -57,9 +58,14 @@ export async function PUT(
 
     // Only apply keys the client actually sent — never let schema defaults
     // (status, taxRate, images, ...) clobber stored values on partial updates.
+    // Inventory-only fields are stripped — stock lives only in InventoryState.
     const update: Record<string, unknown> = {};
     for (const k of Object.keys(body)) {
+      if (k === "initialStock") continue;
       if (k in parsed.data) update[k] = (parsed.data as Record<string, unknown>)[k];
+    }
+    if (Array.isArray(update.variants)) {
+      update.variants = (update.variants as any[]).map(({ stock: _s, ...rest }) => rest);
     }
     const updatedProduct = await Product.findByIdAndUpdate(id, update, {
       new: true,
@@ -68,6 +74,34 @@ export async function PUT(
 
     if (!updatedProduct) {
       return NextResponse.json(errorResponse("NOT_FOUND", "Product not found"), { status: 404 });
+    }
+
+    // Ensure inventory rows for current SKUs; apply stock only when the client sent it.
+    try {
+      const bodyInitial = typeof body.initialStock === "number" ? body.initialStock : undefined;
+      const stockBySku = new Map<string, number>();
+      if (Array.isArray(body.variants)) {
+        for (const v of body.variants) {
+          if (v?.sku && typeof v.stock === "number") stockBySku.set(String(v.sku).toUpperCase(), v.stock);
+        }
+      }
+      const useVariants = updatedProduct.hasVariants && (updatedProduct.variants?.length || 0) > 0;
+      if (!useVariants && !updatedProduct.baseSKU) {
+        updatedProduct.baseSKU = `SKU-${String(updatedProduct._id).slice(0, 8).toUpperCase()}`;
+        await updatedProduct.save();
+      }
+      await InventoryService.syncFromProduct({
+        productId: String(updatedProduct._id),
+        baseSKU: updatedProduct.baseSKU,
+        hasVariants: useVariants,
+        variants: (updatedProduct.variants || []).map((v: any) => ({
+          sku: String(v.sku),
+          stock: stockBySku.get(String(v.sku).toUpperCase()),
+        })),
+        initialStock: bodyInitial,
+      });
+    } catch (invErr) {
+      logger.error("Inventory sync failed after product update", "product", { productId: id, error: String(invErr) });
     }
 
     try {

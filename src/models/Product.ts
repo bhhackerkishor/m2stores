@@ -26,6 +26,7 @@ export interface IProductSEO {
   metaTitle: string;
   metaDescription: string;
   keywords: string[];
+  ogImage?: string;
 }
 
 export interface IProduct extends Document {
@@ -114,6 +115,7 @@ const ProductSchema = new Schema<IProduct>(
       metaTitle: { type: String, maxlength: 60 },
       metaDescription: { type: String, maxlength: 160 },
       keywords: { type: [String], default: [] },
+      ogImage: { type: String },
     },
     status: { type: String, enum: ["DRAFT", "PUBLISHED", "ARCHIVED"], default: "DRAFT", index: true },
     isFeatured: { type: Boolean, default: false },

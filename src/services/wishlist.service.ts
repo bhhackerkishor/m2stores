@@ -36,13 +36,31 @@ async function resolveSku(productId?: string, sku?: string) {
 async function getOrCreate(identity: Identity) {
   await connectDB();
   if (identity.userId) {
-    let w = await Wishlist.findOne({ userId: identity.userId });
-    if (!w) w = await Wishlist.create({ userId: identity.userId });
-    return w;
+    const w = await Wishlist.findOne({ userId: identity.userId });
+    if (w) return w;
+    try {
+      return await Wishlist.create({ userId: identity.userId });
+    } catch (e: any) {
+      if (e?.code === 11000 || e?.code === 11001) {
+        const raced = await Wishlist.findOne({ userId: identity.userId });
+        if (raced) return raced;
+      }
+      throw e;
+    }
   }
-  let w = await Wishlist.findOne({ guestSessionId: identity.guestSessionId });
-  if (!w) w = await Wishlist.create({ guestSessionId: identity.guestSessionId });
-  return w;
+  const guestId = identity.guestSessionId;
+  if (!guestId) throw new AppError("Guest session missing", 400, "NO_GUEST_SESSION");
+  const w = await Wishlist.findOne({ guestSessionId: guestId });
+  if (w) return w;
+  try {
+    return await Wishlist.create({ guestSessionId: guestId });
+  } catch (e: any) {
+    if (e?.code === 11000 || e?.code === 11001) {
+      const raced = await Wishlist.findOne({ guestSessionId: guestId });
+      if (raced) return raced;
+    }
+    throw e;
+  }
 }
 
 export class WishlistService {
@@ -139,7 +157,17 @@ export class WishlistService {
     const guest = await Wishlist.findOne({ guestSessionId });
     if (!guest || guest.items.length === 0) return { merged: 0 };
     let user = await Wishlist.findOne({ userId });
-    if (!user) user = await Wishlist.create({ userId });
+    if (!user) {
+      try {
+        user = await Wishlist.create({ userId });
+      } catch (e: any) {
+        if (e?.code === 11000 || e?.code === 11001) {
+          const raced = await Wishlist.findOne({ userId });
+          if (raced) user = raced;
+          else throw e;
+        } else throw e;
+      }
+    }
     const existingSkus = new Set((user.items as any[]).map((i: any) => i.sku));
     let merged = 0;
     for (const g of guest.items as any[]) {

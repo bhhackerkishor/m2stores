@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/models/Product";
+import { InventoryState } from "@/models/Inventory";
 import { AdminProductTable } from "@/components/admin/AdminProductTable";
 
 async function getProducts(q?: string) {
@@ -18,8 +19,32 @@ async function getProducts(q?: string) {
       .limit(50)
       .populate("brandId", "name")
       .lean();
-    // Serialize for client component boundary
-    return JSON.parse(JSON.stringify(products));
+
+    // Aggregate physical stock per product (InventoryState is the source of truth)
+    const ids = products.map((p: any) => p._id);
+    const stockRows = ids.length
+      ? await InventoryState.aggregate([
+          { $match: { productId: { $in: ids } } },
+          {
+            $group: {
+              _id: "$productId",
+              stock: { $sum: "$stock" },
+              reservedStock: { $sum: "$reservedStock" },
+            },
+          },
+        ])
+      : [];
+    const stockMap = new Map<string, { stock: number; reservedStock: number }>();
+    for (const r of stockRows) stockMap.set(String(r._id), r);
+
+    return JSON.parse(
+      JSON.stringify(
+        products.map((p: any) => {
+          const s = stockMap.get(String(p._id));
+          return { ...p, stock: s ? s.stock - s.reservedStock : 0 };
+        })
+      )
+    );
   } catch (error) {
     console.error("Admin products fetch failed:", error);
     return [];

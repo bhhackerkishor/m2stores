@@ -18,8 +18,8 @@ export interface ICart {
 
 const CartSchema = new Schema<ICart>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", sparse: true, unique: true },
-    guestSessionId: { type: String, sparse: true, unique: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User" },
+    guestSessionId: { type: String },
     items: [
       {
         productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
@@ -32,6 +32,11 @@ const CartSchema = new Schema<ICart>(
   },
   { timestamps: true }
 );
+
+// Partial unique indexes: only real values are indexed, so missing/null never
+// collides (sparse unique still indexes explicit nulls → E11000 on guestSessionId).
+CartSchema.index({ userId: 1 }, { unique: true, partialFilterExpression: { userId: { $type: "objectId" } } });
+CartSchema.index({ guestSessionId: 1 }, { unique: true, partialFilterExpression: { guestSessionId: { $type: "string" } } });
 
 export const Cart =
   (mongoose.models.Cart as mongoose.Model<ICart> | undefined) || mongoose.model<ICart>("Cart", CartSchema);

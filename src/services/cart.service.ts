@@ -31,16 +31,35 @@ export async function resolveIdentity(): Promise<Identity> {
   return { guestSessionId, isGuest: true };
 }
 
-export async function getOrCreateCart(identity: Identity) {
+export async function getOrCreateCart(identity: Identity): Promise<InstanceType<typeof Cart>> {
   await connectDB();
   if (identity.userId) {
-    let cart = await Cart.findOne({ userId: identity.userId });
-    if (!cart) cart = await Cart.create({ userId: identity.userId });
-    return cart;
+    const existing = await Cart.findOne({ userId: identity.userId });
+    if (existing) return existing;
+    try {
+      return await Cart.create({ userId: identity.userId });
+    } catch (e: any) {
+      // Lost the upsert race — another request created it first.
+      if (e?.code === 11000 || e?.code === 11001) {
+        const raced = await Cart.findOne({ userId: identity.userId });
+        if (raced) return raced;
+      }
+      throw e;
+    }
   }
-  let cart = await Cart.findOne({ guestSessionId: identity.guestSessionId });
-  if (!cart) cart = await Cart.create({ guestSessionId: identity.guestSessionId });
-  return cart;
+  const guestId = identity.guestSessionId;
+  if (!guestId) throw new AppError("Guest session missing", 400, "NO_GUEST_SESSION");
+  const existing = await Cart.findOne({ guestSessionId: guestId });
+  if (existing) return existing;
+  try {
+    return await Cart.create({ guestSessionId: guestId });
+  } catch (e: any) {
+    if (e?.code === 11000 || e?.code === 11001) {
+      const raced = await Cart.findOne({ guestSessionId: guestId });
+      if (raced) return raced;
+    }
+    throw e;
+  }
 }
 
 async function resolveSku(productId?: string, sku?: string) {
@@ -247,7 +266,17 @@ export class CartService {
     const guest = await Cart.findOne({ guestSessionId });
     if (!guest || guest.items.length === 0) return { merged: 0 };
     let user = await Cart.findOne({ userId });
-    if (!user) user = await Cart.create({ userId });
+    if (!user) {
+      try {
+        user = await Cart.create({ userId });
+      } catch (e: any) {
+        if (e?.code === 11000 || e?.code === 11001) {
+          const raced = await Cart.findOne({ userId });
+          if (raced) user = raced;
+          else throw e;
+        } else throw e;
+      }
+    }
     let merged = 0;
     for (const g of guest.items as any[]) {
       const existing = user.items.find((i: any) => i.sku === g.sku);

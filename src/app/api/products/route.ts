@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/models/Product";
 import { CatalogService } from "@/services/catalog.service";
+import { InventoryService } from "@/services/inventory.service";
 import { createProductSchema } from "@/validators/product";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse, paginatedResponse } from "@/lib/api-response";
@@ -70,7 +71,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(errorResponse("CONFLICT", "Product with this slug already exists"), { status: 409 });
     }
 
-    const product = await Product.create({ ...parsed.data, slug: parsed.data.slug.toLowerCase() });
+    // Strip inventory-only fields so Product never stores quantity (stock lives in InventoryState).
+    const { initialStock: _initialStock, ...productPayload } = parsed.data as any & { initialStock?: number };
+    if (Array.isArray(productPayload.variants)) {
+      productPayload.variants = productPayload.variants.map(({ stock: _s, ...rest }: any) => rest);
+    }
+    const product = await Product.create({ ...productPayload, slug: parsed.data.slug.toLowerCase() });
+
+    // Auto-generate baseSKU for simple products so inventory + cart SKU resolution always work.
+    const useVariants = product.hasVariants && (product.variants?.length || 0) > 0;
+    if (!useVariants && !product.baseSKU) {
+      product.baseSKU = `SKU-${String(product._id).slice(0, 8).toUpperCase()}`;
+      await product.save();
+    }
+
+    // Create InventoryState rows (form stock or 0) — without this the product is unsellable.
+    try {
+      const stockBySku = new Map(
+        (parsed.data.variants || []).map((v) => [v.sku.toUpperCase(), v.stock] as const)
+      );
+      await InventoryService.syncFromProduct({
+        productId: String(product._id),
+        baseSKU: product.baseSKU,
+        hasVariants: useVariants,
+        variants: (product.variants || []).map((v: { sku: string }) => ({
+          sku: String(v.sku),
+          stock: stockBySku.get(String(v.sku).toUpperCase()),
+        })),
+        initialStock: parsed.data.initialStock,
+      });
+    } catch (invErr) {
+      // Product exists; missing inventory heals on next save/backfill — don't fail create.
+      logger.error("Inventory sync failed after product create", "product", { productId: String(product._id), error: String(invErr) });
+    }
+
     logger.info("Product created", "product", { productId: product._id });
     try {
       const { AuditLog } = await import("@/models/AuditLog");

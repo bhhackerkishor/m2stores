@@ -60,7 +60,6 @@ export default function AdminInventoryPage() {
           sku: adjusting.sku,
           delta: parseInt(delta),
           reason,
-          performedBy: "admin",
         }),
       });
       const data = await res.json();

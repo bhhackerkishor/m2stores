@@ -15,6 +15,7 @@ interface AdminProduct {
   status?: string;
   images?: Array<{ url: string }>;
   brandId?: { name?: string } | null;
+  stock?: number;
 }
 
 export function AdminProductTable({ products }: { products: AdminProduct[] }) {
@@ -79,6 +80,7 @@ export function AdminProductTable({ products }: { products: AdminProduct[] }) {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Product</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Brand</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Price</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Stock</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Actions</th>
               </tr>
@@ -102,6 +104,17 @@ export function AdminProductTable({ products }: { products: AdminProduct[] }) {
                   <td className="px-4 py-3 text-sm text-surface-600 dark:text-surface-300">{product.brandId?.name || "-"}</td>
                   <td className="px-4 py-3 text-sm font-medium text-surface-900 dark:text-surface-100">
                     ₹{product.salePrice || product.basePrice}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {product.stock === undefined || product.stock === null ? (
+                      <span className="text-surface-400">—</span>
+                    ) : product.stock <= 0 ? (
+                      <span className="text-red-600 dark:text-red-400 font-medium">Out of stock</span>
+                    ) : product.stock <= 5 ? (
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">{product.stock} left</span>
+                    ) : (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">{product.stock}</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span

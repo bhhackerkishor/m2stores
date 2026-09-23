@@ -208,6 +208,65 @@ async function main() {
       await assertInvariants("concurrent-commit");
       ok("concurrent commits never over-deduct");
     } catch (e) { fail("concurrent commits never over-deduct", e); }
+
+    // 12. syncFromProduct creates missing inventory rows with form stock
+    try {
+      await InventoryState.deleteMany({ productId });
+      const syncPid = newOid();
+      const out = await InventoryService.syncFromProduct({
+        productId: syncPid,
+        baseSKU: "SYNC-001",
+        hasVariants: false,
+        initialStock: 7,
+      });
+      if (out.created !== 1) throw new Error(`expected created=1, got ${out.created}`);
+      const st: any = await InventoryState.findOne({ productId: syncPid, sku: "SYNC-001" }).lean();
+      if (!st) throw new Error("inventory row not created");
+      if (st.stock !== 7) throw new Error(`expected stock=7, got ${st.stock}`);
+      ok("syncFromProduct creates simple-product inventory with stock");
+    } catch (e) { fail("syncFromProduct creates simple-product inventory with stock", e); }
+
+    // 13. syncFromProduct creates one row per variant
+    try {
+      const syncPid = newOid();
+      const out = await InventoryService.syncFromProduct({
+        productId: syncPid,
+        hasVariants: true,
+        variants: [
+          { sku: "VAR-A", stock: 3 },
+          { sku: "VAR-B", stock: 10 },
+        ],
+      });
+      if (out.created !== 2) throw new Error(`expected created=2, got ${out.created}`);
+      const a: any = await InventoryState.findOne({ productId: syncPid, sku: "VAR-A" }).lean();
+      const b: any = await InventoryState.findOne({ productId: syncPid, sku: "VAR-B" }).lean();
+      if (a?.stock !== 3 || b?.stock !== 10) throw new Error(`variant stocks ${a?.stock}/${b?.stock}`);
+      ok("syncFromProduct creates per-variant inventory");
+    } catch (e) { fail("syncFromProduct creates per-variant inventory", e); }
+
+    // 14. syncFromProduct without stock does not clobber existing stock
+    try {
+      const syncPid = newOid();
+      await InventoryService.syncFromProduct({ productId: syncPid, baseSKU: "KEEP-001", initialStock: 42 });
+      const out = await InventoryService.syncFromProduct({ productId: syncPid, baseSKU: "KEEP-001" });
+      if (out.updated !== 0 || out.created !== 0) throw new Error(`expected no-op, got created=${out.created} updated=${out.updated}`);
+      const st: any = await InventoryState.findOne({ productId: syncPid, sku: "KEEP-001" }).lean();
+      if (st.stock !== 42) throw new Error(`stock clobbered: ${st.stock}`);
+      ok("syncFromProduct does not clobber stock when omitted");
+    } catch (e) { fail("syncFromProduct does not clobber stock when omitted", e); }
+
+    // 15. syncFromProduct clamps stock to reservedStock (invariant)
+    try {
+      const syncPid = newOid();
+      await InventoryService.syncFromProduct({ productId: syncPid, baseSKU: "CLAMP-001", initialStock: 10 });
+      await InventoryState.updateOne({ productId: syncPid, sku: "CLAMP-001" }, { $set: { reservedStock: 5 } });
+      const out = await InventoryService.syncFromProduct({ productId: syncPid, baseSKU: "CLAMP-001", initialStock: 2 });
+      if (out.updated !== 1) throw new Error(`expected updated=1, got ${out.updated}`);
+      const st: any = await InventoryState.findOne({ productId: syncPid, sku: "CLAMP-001" }).lean();
+      if (st.stock !== 5) throw new Error(`expected clamp to reserved=5, got stock=${st.stock}`);
+      await assertInvariants("sync-clamp");
+      ok("syncFromProduct clamps stock to reservedStock");
+    } catch (e) { fail("syncFromProduct clamps stock to reservedStock", e); }
   } finally {
     await mongoose.disconnect();
     await replset.stop();

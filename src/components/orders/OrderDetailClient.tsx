@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,8 @@ import {
   Zap,
   Headphones,
   Send,
-  MessageSquare
+  MessageSquare,
+  RefreshCw // Added icon
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,6 +43,7 @@ export function OrderDetailClient({ order, deliveryDays = 3 }: { order: any; del
   // Existing tickets for this order
   const [existingTicket, setExistingTicket] = useState<any>(null);
   const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // Added refreshing state
   const [replyText, setReplyText] = useState("");
   const [replyBusy, setReplyBusy] = useState(false);
 
@@ -49,20 +51,29 @@ export function OrderDetailClient({ order, deliveryDays = 3 }: { order: any; del
   const cancellable = customerCanCancel(order.orderStatus);
   const needsPayment = order.orderStatus === "PENDING_PAYMENT" || (order.paymentInfo?.status !== "PAID" && order.paymentInfo?.status !== "CREATED");
   const isCOD = order.paymentInfo?.method === "COD";
-
   // Fetch existing tickets for this order
-  useEffect(() => {
-    fetch("/api/support")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success && Array.isArray(d.data)) {
-          const linked = d.data.find((t: any) => t.orderId === order._id || t.orderNumber === order.orderNumber);
-          if (linked) setExistingTicket(linked);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setTicketsLoading(false));
+
+  const fetchTickets = useCallback(async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    try {
+      const res = await fetch("/api/support");
+      const d = await res.json();
+      if (d.success && Array.isArray(d.data)) {
+        const linked = d.data.find((t: any) => t.orderId === order._id || t.orderNumber === order.orderNumber);
+        if (linked) setExistingTicket(linked);
+      }
+    } catch (e) {
+      console.error("Failed to fetch tickets", e);
+    } finally {
+      setTicketsLoading(false);
+      if (isManual) setRefreshing(false);
+    }
   }, [order._id, order.orderNumber]);
+
+  // Fetch existing tickets on mount
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
 
   const handlePayNow = async () => {
     setPaying(true);
@@ -418,72 +429,121 @@ export function OrderDetailClient({ order, deliveryDays = 3 }: { order: any; del
             {/* Raise Ticket Card / Existing Ticket Thread */}
             {order.orderStatus !== "CANCELLED" && (
               <Card className="p-6 border-surface-200/80 shadow-sm rounded-2xl bg-white">
-                <div className="flex items-center gap-2 mb-3">
-                  <Headphones className="w-4 h-4 text-blue-600" />
-                  <h3 className="font-bold text-surface-900">
-                    {existingTicket ? "Support Ticket" : "Need Help?"}
-                  </h3>
-                </div>
+      {/* Support Ticket Header with Refresh Button */}
+<div className="flex items-center justify-between mb-3">
+  <div className="flex items-center gap-2">
+    <Headphones className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+    <h3 className="font-bold text-surface-900 dark:text-surface-100">
+      {existingTicket ? "Support Ticket" : "Need Help?"}
+    </h3>
+  </div>
 
-                {ticketsLoading ? (
-                  <div className="space-y-2">
-                    <div className="h-4 bg-surface-100 rounded animate-pulse w-3/4" />
-                    <div className="h-4 bg-surface-100 rounded animate-pulse w-1/2" />
-                  </div>
-                ) : existingTicket ? (
-                  <div className="space-y-3">
-                    {/* Ticket status badge */}
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                        existingTicket.status === "OPEN" ? "bg-amber-100 text-amber-700" :
-                        existingTicket.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-700" :
-                        existingTicket.status === "RESOLVED" ? "bg-emerald-100 text-emerald-700" :
-                        "bg-surface-100 text-surface-600"
-                      }`}>
-                        {existingTicket.status.replace(/_/g, " ")}
-                      </span>
-                      <span className="text-[10px] text-surface-400 font-mono">
-                        #{existingTicket.ticketNumber}
-                      </span>
-                    </div>
+  {existingTicket && (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => fetchTickets(true)}
+      disabled={refreshing}
+      className="h-7 px-2 text-xs text-surface-500 hover:text-blue-600 dark:text-surface-400 dark:hover:text-blue-400 hover:bg-surface-100 dark:hover:bg-surface-800"
+      title="Refresh messages"
+    >
+      <RefreshCw className={`w-3.5 h-3.5 mr-1 ${refreshing ? "animate-spin text-blue-600 dark:text-blue-400" : ""}`} />
+      Refresh
+    </Button>
+  )}
+</div>
 
-                    {/* Thread messages */}
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {(existingTicket.messages || []).map((msg: any, i: number) => (
-                        <div key={i} className={`p-2.5 rounded-lg text-xs ${
-                          msg.sender === "ADMIN"
-                            ? "bg-blue-50 border border-blue-100 ml-4"
-                            : "bg-surface-50 border border-surface-200 mr-4"
-                        }`}>
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className={`font-bold ${msg.sender === "ADMIN" ? "text-blue-700" : "text-surface-700"}`}>
-                              {msg.sender === "ADMIN" ? "Support" : "You"}
-                            </span>
-                            <span className="text-surface-400">
-                              {new Date(msg.timestamp).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
-                            </span>
-                          </div>
-                          <p className="text-surface-600 whitespace-pre-wrap">{msg.content}</p>
-                        </div>
-                      ))}
-                    </div>
 
-                    {/* Reply input (only if ticket is open/in-progress) */}
-                    {["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTOMER"].includes(existingTicket.status) && (
-                      <div className="flex gap-2 pt-2 border-t border-surface-100">
-                        <Input
-                          value={replyText}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReplyText(e.target.value)}
-                          placeholder="Reply to support..."
-                          className="text-xs"
-                          onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
-                        />
-                        <Button size="sm" onClick={handleReply} isLoading={replyBusy} disabled={!replyText.trim()}>
-                          <Send className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+
+      {ticketsLoading ? (
+        <div className="space-y-2">
+          <div className="h-4 bg-surface-100 rounded animate-pulse w-3/4" />
+          <div className="h-4 bg-surface-100 rounded animate-pulse w-1/2" />
+        </div>
+      ) : existingTicket ? (
+        <div className="space-y-3">
+          {/* Helper Notice Text */}
+          {/* Dark Mode Supported Helper Notice */}
+<p className="text-[11px] text-surface-500 dark:text-surface-400 italic bg-surface-50 dark:bg-surface-800/60 p-2 rounded-lg border border-surface-100 dark:border-surface-700">
+  Click <strong>Refresh</strong> above to get the latest messages from our support team.
+</p>
+
+          {/* Ticket status badge */}
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+              existingTicket.status === "OPEN" ? "bg-amber-100 text-amber-700" :
+              existingTicket.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-700" :
+              existingTicket.status === "RESOLVED" ? "bg-emerald-100 text-emerald-700" :
+              "bg-surface-100 text-surface-600"
+            }`}>
+              {existingTicket.status.replace(/_/g, " ")}
+            </span>
+            <span className="text-[10px] text-surface-400 font-mono">
+              #{existingTicket.ticketNumber}
+            </span>
+          </div>
+
+         {/* Thread messages */}
+<div className="space-y-2 max-h-60 overflow-y-auto">
+  {(existingTicket.messages || []).map((msg: any, i: number) => (
+    <div
+      key={i}
+      className={`p-2.5 rounded-lg text-xs transition-colors ${
+        msg.sender === "ADMIN"
+          ? "bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 ml-4"
+          : "bg-surface-50 dark:bg-surface-800/60 border border-surface-200 dark:border-surface-700 mr-4"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <span
+          className={`font-bold ${
+            msg.sender === "ADMIN"
+              ? "text-blue-700 dark:text-blue-300"
+              : "text-surface-700 dark:text-surface-200"
+          }`}
+        >
+          {msg.sender === "ADMIN" ? "Support" : "You"}
+        </span>
+
+        {/* Date & Time Badge */}
+        {msg.timestamp && (
+          <span className="text-[10px] text-surface-400 dark:text-surface-500 font-medium">
+            {new Date(msg.timestamp).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}{" "}
+            at{" "}
+            {new Date(msg.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        )}
+      </div>
+      <p className="text-surface-600 dark:text-surface-300 whitespace-pre-wrap">
+        {msg.content}
+      </p>
+    </div>
+  ))}
+</div>
+
+          {/* Reply input */}
+          {["OPEN", "IN_PROGRESS", "WAITING_FOR_CUSTOMER"].includes(existingTicket.status) && (
+            <div className="flex gap-2 pt-2 border-t border-surface-100">
+              <Input
+                value={replyText}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReplyText(e.target.value)}
+                placeholder="Reply to support..."
+                className="text-xs"
+                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
+              />
+              <Button size="sm" onClick={handleReply} isLoading={replyBusy} disabled={!replyText.trim()}>
+                <Send className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
                 ) : ticketSuccess ? (
                   <div className="p-3 bg-accent-50 dark:bg-accent-950/30 rounded-lg text-sm text-accent-700 dark:text-accent-300">
                     Support ticket created. Our team will respond within 24 hours.

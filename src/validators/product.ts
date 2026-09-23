@@ -28,14 +28,20 @@ export const createProductSchema = z.object({
   taxRate: z.number().min(0).max(100).default(18),
   hasVariants: z.boolean().default(false),
   baseSKU: z.string().max(100).optional(),
+  // Initial physical stock for non-variant products (stored in InventoryState, not Product).
+  initialStock: z.number().int().min(0).max(1000000).optional(),
   variants: z
     .array(
       z.object({
         sku: z.string(),
-        attributes: z.record(z.string()),
+        // Legacy rows may lack attributes — default to {} instead of 400.
+        attributes: z.record(z.string()).optional().default({}),
         price: z.number().min(0),
         salePrice: z.number().min(0).optional(),
+        images: z.array(z.string()).optional().default([]),
         isActive: z.boolean().default(true),
+        // Physical stock for this variant SKU (InventoryState, stripped before Product save).
+        stock: z.number().int().min(0).max(1000000).optional(),
       })
     )
     .optional(),
@@ -59,6 +65,7 @@ export const createProductSchema = z.object({
       metaTitle: z.string().max(60).optional(),
       metaDescription: z.string().max(160).optional(),
       keywords: z.array(z.string()).optional(),
+      ogImage: z.string().max(2000).optional(),
     })
     .optional(),
   specifications: z

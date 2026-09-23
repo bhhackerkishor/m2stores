@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { InventoryService } from "@/services/inventory.service";
 import { adjustSchema } from "@/validators/inventory";
 import { AuditLog } from "@/models/AuditLog";
@@ -7,31 +8,37 @@ import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { AppError } from "@/lib/errors";
 
-// NOTE: RBAC check should verify admin session via getSessionFromCookie + hasPermission(inventory.adjust).
-// Kept as service-level route; middleware already gates /api/admin/* paths in production setup.
 export async function POST(request: NextRequest) {
   try {
+    const { requirePermission } = await import("@/lib/auth-server");
+    const session = await requirePermission("inventory.adjust");
+
     const body = await request.json();
     const parsed = adjustSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Invalid input", parsed.error.flatten()), { status: 400 });
     }
-    const performedBy = (body.performedBy as string) || "system";
+
+    // performedBy must be a User ObjectId — never trust client-provided labels like "admin".
+    const performedBy = mongoose.isValidObjectId(session.userId) ? String(session.userId) : undefined;
+
     const result = await InventoryService.adjust({ ...parsed.data, performedBy });
 
     // Audit every manual adjustment
     try {
       await connectDB();
-      await AuditLog.create({
-        admin: performedBy as any,
-        action: "INVENTORY_ADJUSTED",
-        entity: "InventoryState",
-        entityId: `${parsed.data.productId}:${parsed.data.sku}`,
-        newValue: { delta: parsed.data.delta, reason: parsed.data.reason } as any,
-        ip: request.headers.get("x-forwarded-for") || "unknown",
-        userAgent: request.headers.get("user-agent") || "unknown",
-        timestamp: new Date(),
-      });
+      if (performedBy) {
+        await AuditLog.create({
+          admin: performedBy as any,
+          action: "INVENTORY_ADJUSTED",
+          entity: "InventoryState",
+          entityId: `${parsed.data.productId}:${parsed.data.sku}`,
+          newValue: { delta: parsed.data.delta, reason: parsed.data.reason } as any,
+          ip: request.headers.get("x-forwarded-for") || "unknown",
+          userAgent: request.headers.get("user-agent") || "unknown",
+          timestamp: new Date(),
+        });
+      }
     } catch (auditErr) {
       logger.warn("Audit log failed for inventory adjust", "inventory", { auditErr: String(auditErr) });
     }

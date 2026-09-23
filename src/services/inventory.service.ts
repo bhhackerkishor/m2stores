@@ -24,6 +24,8 @@ async function claimOperation(args: {
   session?: mongoose.ClientSession;
 }): Promise<{ claimed: boolean; existing?: any }> {
   const { session, ...rest } = args;
+  // performedBy is ObjectId ref — drop labels like "admin"/"system" so create never Cast-errors.
+  const performedBy = rest.performedBy && mongoose.isValidObjectId(rest.performedBy) ? rest.performedBy : undefined;
   try {
     await InventoryOperation.create(
       [
@@ -41,7 +43,7 @@ async function claimOperation(args: {
           newReserved: 0,
           status: "PENDING",
           reason: rest.reason,
-          performedBy: rest.performedBy as any,
+          performedBy: performedBy as any,
         },
       ],
       session ? { session } : undefined
@@ -535,5 +537,66 @@ export class InventoryService {
     const states = await InventoryState.find(filter).lean();
     const violations = states.filter((s) => s.stock < 0 || s.reservedStock < 0 || s.reservedStock > s.stock);
     return { checked: states.length, violations };
+  }
+
+  /**
+   * Ensure InventoryState rows exist for a product's sellable SKUs and
+   * optionally apply form-provided stock. Stock lives only in InventoryState —
+   * Product never stores quantity. Missing rows are created (stock 0 when not
+   * provided); existing rows are only updated when a numeric stock is given,
+   * and never below reservedStock (invariant: stock >= reserved).
+   */
+  static async syncFromProduct(input: {
+    productId: string;
+    baseSKU?: string | null;
+    hasVariants?: boolean;
+    variants?: Array<{ sku: string; stock?: number }>;
+    initialStock?: number;
+  }): Promise<{ created: number; updated: number; skus: string[] }> {
+    await connectDB();
+    const { productId } = input;
+    const useVariants = Boolean(input.hasVariants) && (input.variants?.length ?? 0) > 0;
+
+    const targets: Array<{ sku: string; stock?: number }> = [];
+    if (useVariants) {
+      for (const v of input.variants!) {
+        const sku = String(v.sku || "").trim().toUpperCase();
+        if (!sku) continue;
+        targets.push({ sku, stock: v.stock });
+      }
+    } else {
+      let sku = String(input.baseSKU || "").trim().toUpperCase();
+      if (!sku) sku = `SKU-${productId.slice(0, 8).toUpperCase()}`;
+      targets.push({ sku, stock: input.initialStock });
+    }
+
+    let created = 0;
+    let updated = 0;
+    const skus: string[] = [];
+    for (const t of targets) {
+      const existing = await InventoryState.findOne({ productId, sku: t.sku });
+      if (!existing) {
+        await InventoryState.create({
+          productId,
+          sku: t.sku,
+          stock: Math.max(0, Math.floor(t.stock ?? 0)),
+          reservedStock: 0,
+          lowStockThreshold: 5,
+        });
+        created++;
+      } else if (typeof t.stock === "number" && Number.isFinite(t.stock)) {
+        const next = Math.max(Math.floor(t.stock), existing.reservedStock);
+        if (next !== existing.stock) {
+          existing.stock = next;
+          await existing.save();
+          updated++;
+        }
+      }
+      skus.push(t.sku);
+    }
+    if (created || updated) {
+      logger.info("Product inventory synced", "inventory", { productId, created, updated, skus });
+    }
+    return { created, updated, skus };
   }
 }
