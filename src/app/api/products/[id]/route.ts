@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/models/Product";
+import { Brand } from "@/models/Brand";
+import { Category } from "@/models/Category";
 import { InventoryService } from "@/services/inventory.service";
 import { updateProductSchema } from "@/validators/product";
 import { successResponse, errorResponse } from "@/lib/api-response";
@@ -13,6 +15,9 @@ export async function GET(
 ) {
   try {
     await connectDB();
+    // Ensure populate targets are registered in this route bundle
+    void Brand.modelName;
+    void Category.modelName;
     const { id } = await params;
 
     // Search by ObjectId or fallback to Slug match

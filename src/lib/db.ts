@@ -1,5 +1,8 @@
 import mongoose, { Mongoose } from "mongoose";
 
+// Side-effect: register all schemas before any query/populate (avoids MissingSchemaError).
+import "@/models";
+
 declare global {
   // eslint-disable-next-line no-var
   var __m2_mongoose: { conn: Mongoose | null; promise: Promise<Mongoose> | null } | undefined;

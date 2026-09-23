@@ -3,12 +3,16 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/models/Product";
+import { Brand } from "@/models/Brand";
 import { InventoryState } from "@/models/Inventory";
 import { AdminProductTable } from "@/components/admin/AdminProductTable";
 
 async function getProducts(q?: string) {
   try {
     await connectDB();
+    // Touch Brand so populate("brandId") always has the schema registered
+    // (even if another module didn't import it in this route bundle).
+    void Brand.modelName;
     const filter: Record<string, unknown> = {};
     if (q && q.trim()) {
       const rx = new RegExp(q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
