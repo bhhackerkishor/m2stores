@@ -4,12 +4,7 @@
   "buildCommand": "next build",
   "installCommand": "npm install",
 
-  "crons": [
-    {
-      "path": "/api/cron/inventory-expire",
-      "schedule": "*/5 * * * *"
-    }
-  ],
+  
 
   "headers": [
     {
