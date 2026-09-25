@@ -1,3 +1,4 @@
+// app/product/[slug]/page.tsx
 import type { Metadata } from "next";
 import { ProductDetailPage } from "@/components/storefront/ProductDetailPage";
 import { ProductViewTracker } from "@/components/storefront/ProductViewTracker";
@@ -18,20 +19,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title,
     description,
-    openGraph: {
-      title,
-      description,
-      images: image ? [{ url: image }] : undefined,
-      type: "website",
-    },
+    openGraph: { title, description, images: image ? [{ url: image }] : undefined, type: "website" },
     alternates: { canonical: `/product/${product.slug}` },
   };
 }
 
 function breadcrumbJsonLd(product: any) {
-  const items = [
-    { "@type": "ListItem", position: 1, name: "Home", item: "/" },
-  ];
+  const items = [{ "@type": "ListItem", position: 1, name: "Home", item: "/" }];
   if (product.categoryId?.slug) {
     items.push({ "@type": "ListItem", position: 2, name: product.categoryId.name || "Category", item: `/category/${product.categoryId.slug}` });
   }
@@ -53,12 +47,7 @@ function productJsonLd(product: any) {
       product.totalReviews > 0
         ? { "@type": "AggregateRating", ratingValue: product.averageRating, reviewCount: product.totalReviews }
         : undefined,
-    offers: {
-      "@type": "Offer",
-      priceCurrency: "INR",
-      price,
-      availability: "https://schema.org/InStock",
-    },
+    offers: { "@type": "Offer", priceCurrency: "INR", price, availability: "https://schema.org/InStock" },
   };
 }
 
@@ -68,10 +57,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   if (!product || product.status !== "PUBLISHED") {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold text-surface-900 mb-4">Product Not Found</h1>
-        <p className="text-surface-600 mb-8">The product you&apos;re looking for doesn&apos;t exist.</p>
-        <a href="/shop" className="btn-primary inline-block">Browse Products</a>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-center">
+        <h1 className="text-3xl mb-3">Product Not Found</h1>
+        <p className="text-surface-600 text-sm mb-8 mx-auto">
+          The product you&apos;re looking for doesn&apos;t exist.
+        </p>
+        <a href="/shop" className="btn btn-primary btn-lg inline-flex">Browse Products</a>
       </div>
     );
   }
@@ -88,25 +79,32 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   ]);
 
   return (
-    <div>
+    <div className="pb-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd(plain)) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd(plain)) }} />
       <ProductViewTracker slug={plain.slug} productId={String(product._id)} name={plain.name} price={plain.salePrice || plain.basePrice} />
-      <ProductDetailPage product={plain} deliveryDays={settings.deliveryDays} />
-      <section className="max-w-7xl mx-auto px-4 pb-4">
+
+      <ProductDetailPage product={plain}  />
+
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-2">
         <ProductReviews productId={String(product._id)} />
       </section>
+
       <FrequentlyBoughtTogether productId={String(product._id)} deliveryDays={settings.deliveryDays} />
+
       {related.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 pb-12">
-          <h2 className="text-2xl font-bold text-surface-900 mb-6">Related Products</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 section-y-sm !pt-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-balance">Related Products</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {related.map((r: any) => (
               <ProductCard key={String(r._id)} product={JSON.parse(JSON.stringify(r))} deliveryDays={settings.deliveryDays} />
             ))}
           </div>
         </section>
       )}
+
       <RecentlyViewed excludeSlug={plain.slug} />
     </div>
   );

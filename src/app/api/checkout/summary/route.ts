@@ -11,16 +11,19 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getSessionFromCookie().catch(() => null);
     if (!session?.userId) return NextResponse.json(errorResponse("UNAUTHORIZED", "Login required"), { status: 401 });
-    const useCOD = new URL(request.url).searchParams.get("cod") === "true";
+    const sp = new URL(request.url).searchParams;
+    const useCOD = sp.get("cod") === "true";
+    const pincodeParam = sp.get("pincode") || "";
     const [cart, addresses] = await Promise.all([
       CartService.view({ userId: session.userId, isGuest: false }, { useCOD }),
       AddressService.list(session.userId),
     ]);
     const shippingOptions = await ShippingService.options(cart.pricing.subtotal - cart.pricing.couponDiscount, "STANDARD");
-    const codPreview = addresses[0]
-      ? await ShippingService.checkCOD(cart.pricing.subtotal - cart.pricing.couponDiscount, (addresses[0] as any).pincode).catch(() => ({ eligible: false, fee: 0 }))
-      : { eligible: false, fee: 0 };
-    return NextResponse.json(successResponse({ cart, addresses, shippingOptions, codPreview }));
+    const pincode = pincodeParam || (addresses[0] as any)?.pincode || "";
+    const subtotalAfterCoupon = cart.pricing.subtotal - cart.pricing.couponDiscount;
+    const codPreview = await ShippingService.checkCOD(subtotalAfterCoupon, pincode).catch(() => ({ eligible: false, fee: 0 }));
+    const deliveryCheck = await ShippingService.checkDelivery(pincode).catch(() => ({ deliverable: false }));
+    return NextResponse.json(successResponse({ cart, addresses, shippingOptions, codPreview, deliveryCheck }));
   } catch (error: any) {
     if (error instanceof AppError) return NextResponse.json(errorResponse(error.code, error.message), { status: error.statusCode });
     logger.error("Checkout summary error", "checkout", { error: String(error) });

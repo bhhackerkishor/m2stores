@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { Category } from "@/models/Category";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { categoryUpdateSchema } from "@/validators/catalog";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -34,7 +35,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { requirePermission } = await import("@/lib/auth-server");
     await requirePermission("categories.write");
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    const parsed = categoryUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Invalid category data"),
+        { status: 400 }
+      );
+    }
     await connectDB();
     const { slug } = await params;
 
@@ -43,8 +51,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json(errorResponse("NOT_FOUND", "Category not found"), { status: 404 });
     }
 
-    // Determine new parent ID
-    const newParentId = body.parentCategoryId !== undefined ? body.parentCategoryId : existingCategory.parentCategoryId;
+    // Determine new parent ID (explicit parsed field only — raw body is never spread)
+    const newParentId =
+      parsed.data.parentCategoryId !== undefined ? parsed.data.parentCategoryId || null : existingCategory.parentCategoryId;
 
     // Prevent category from being its own parent
     if (newParentId && newParentId.toString() === existingCategory._id.toString()) {
@@ -61,13 +70,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       newLevel = (parent.level ?? 0) + 1;
     }
 
-    // Prepare update object
-    const updateData = {
-      ...body,
-      slug: body.slug ? body.slug.toLowerCase() : existingCategory.slug,
-      parentCategoryId: newParentId || null,
-      level: newLevel,
-    };
+    // Prepare update object from Zod-parsed fields only (unknown keys stripped)
+    const updateData: Record<string, unknown> = {};
+    for (const key of ["name", "slug", "description", "image", "attributes", "sortOrder", "isActive"] as const) {
+      if (parsed.data[key] !== undefined) updateData[key] = parsed.data[key];
+    }
+    if (updateData.slug) updateData.slug = String(updateData.slug).toLowerCase();
+    updateData.parentCategoryId = newParentId;
+    updateData.level = newLevel;
 
     const category = await Category.findByIdAndUpdate(existingCategory._id, updateData, { new: true });
 

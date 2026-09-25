@@ -170,24 +170,36 @@ async function main() {
       ok("COD eligibility gates (disabled/min/max/pincode)");
     } catch (e) { fail("COD eligibility gates (disabled/min/max/pincode)", e); }
 
-    // 7. Refund transitions + over-refund guard (mocked provider HTTP)
+    // 7. Refund lifecycle: async record (REFUND_PENDING) → confirmRefund transition →
+    //    over-refund guard accumulates across partial refunds (mocked provider HTTP)
     try {
       const { order } = await makePendingOrder(`TSTRF${Date.now().toString(36).toUpperCase()}`);
-      // Mark paid first (skip provider network by direct confirm path? use PaymentService.confirmPaid after faking PAID webhook)
       const pay: any = await Payment.findOne({ orderId: order._id });
       const inner = { data: { merchantTransactionId: pay.merchantTransactionId, transactionId: "TXN_R" }, code: "PAYMENT_SUCCESS", success: true };
       const b64 = Buffer.from(JSON.stringify(inner)).toString("base64");
       const sig = buildCallbackChecksum(b64, process.env.PHONEPE_SALT_KEY!, process.env.PHONEPE_SALT_INDEX!);
       await new PhonePeProvider().handleWebhook(JSON.stringify({ response: b64 }), { "x-verify": sig });
 
-      const refundFetch = mockFetch(() => ({ success: true, data: { merchantTransactionId: "RF123" } }));
+      const refundFetch = mockFetch((url: any) => {
+        if (String(url).includes("/pg/v1/status/")) {
+          return { success: true, code: "PAYMENT_SUCCESS", data: { state: "COMPLETED" } };
+        }
+        return { success: true, data: { merchantTransactionId: "RF123" } };
+      });
       const { getPaymentProvider } = await import("../services/payment/phonepe.provider");
       const provider: any = getPaymentProvider("PHONEPE", refundFetch);
       const payDoc: any = await Payment.findOne({ orderId: order._id });
       const total = payDoc.amount;
-      await provider.refundPayment({ paymentId: payDoc.paymentId, orderId: String(order._id), amount: Math.round(total / 2), reason: "test partial" });
+      const half = Math.round(total / 2);
+
+      // Async design: provider call records REFUND_PENDING, status transitions on confirm
+      await provider.refundPayment({ paymentId: payDoc.paymentId, orderId: String(order._id), amount: half, reason: "test partial" });
       const afterPartial: any = await Payment.findOne({ orderId: order._id }).lean();
-      if (afterPartial.status !== "PARTIALLY_REFUNDED") throw new Error(`expected PARTIALLY_REFUNDED got ${afterPartial.status}`);
+      if (afterPartial.status !== "PAID") throw new Error(`expected PAID before confirm got ${afterPartial.status}`);
+      if (afterPartial.refundDetails?.status !== "REFUND_PENDING") throw new Error(`expected REFUND_PENDING got ${afterPartial.refundDetails?.status}`);
+      if (afterPartial.refundDetails?.amount !== half) throw new Error(`expected refunded ${half} got ${afterPartial.refundDetails?.amount}`);
+
+      // Over-refund guard is active immediately (accumulated refundDetails.amount)
       let overThrew = false;
       try {
         await provider.refundPayment({ paymentId: payDoc.paymentId, orderId: String(order._id), amount: total, reason: "over" });
@@ -195,8 +207,15 @@ async function main() {
         if (err?.code === "REFUND_EXCEEDS") overThrew = true;
       }
       if (!overThrew) throw new Error("expected REFUND_EXCEEDS");
-      ok("refund partial→guarded (no over-refund)");
-    } catch (e) { fail("refund partial→guarded (no over-refund)", e); }
+
+      // Refund confirmation (status API says PAID) → PARTIALLY_REFUNDED
+      const confirm1: any = await provider.confirmRefund("RF123");
+      const afterConfirm: any = await Payment.findOne({ orderId: order._id }).lean();
+      if (confirm1.status !== "PARTIALLY_REFUNDED" || afterConfirm.status !== "PARTIALLY_REFUNDED") {
+        throw new Error(`expected PARTIALLY_REFUNDED got ${afterConfirm.status}`);
+      }
+      ok("refund async record → confirm → over-refund guarded");
+    } catch (e) { fail("refund async record → confirm → over-refund guarded", e); }
 
     // 8. Initiate idempotency: one Payment doc per order
     try {

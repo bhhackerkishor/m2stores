@@ -106,7 +106,11 @@ export class CartService {
       }
     }
     const cart = await getOrCreateCart(identity);
-    const existing = cart.items.find((i: any) => i.sku === sku);
+    // Merge only when BOTH product AND sku match — different variants of the
+    // same product (e.g. shirt size S vs M) stay as separate cart lines.
+    const existing = cart.items.find(
+      (i: any) => i.sku === sku && String(i.productId) === String((product as any)._id)
+    );
     const newTotal = Math.min(MAX_QTY_PER_ITEM, (existing?.quantity || 0) + qty);
     const avail = await InventoryService.getAvailable(String((product as any)._id), sku);
     if (avail.available < 1) throw new InsufficientStockError("This item is currently out of stock");
@@ -279,7 +283,9 @@ export class CartService {
     }
     let merged = 0;
     for (const g of guest.items as any[]) {
-      const existing = user.items.find((i: any) => i.sku === g.sku);
+      const existing = user.items.find(
+        (i: any) => i.sku === g.sku && String(i.productId) === String(g.productId)
+      );
       const avail = await InventoryService.getAvailable(String(g.productId), g.sku).catch(() => ({ available: 0 }));
       const want = Math.min(MAX_QTY_PER_ITEM, (existing?.quantity || 0) + g.quantity);
       const capped = Math.min(want, (avail as any).available ?? want);

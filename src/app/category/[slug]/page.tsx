@@ -84,7 +84,7 @@ export default async function CategoryPage({
   return (
     <div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }} />
-      <CategoryMegaMenu categories={JSON.parse(JSON.stringify(allCategories))} />
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <nav aria-label="Breadcrumb" className="text-sm text-surface-500 mb-2">

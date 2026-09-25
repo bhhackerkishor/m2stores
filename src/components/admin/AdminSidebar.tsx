@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Package, Tags, Building2, ClipboardList, ShoppingCart,
   Users, CreditCard, Ticket, BadgePercent, Star, Undo2, RefreshCcw, Truck,
   Megaphone, Home, Bell, Headphones, BarChart3, LineChart, Upload, Settings,
-  ShieldCheck, FileText, ChevronLeft, ChevronRight, X,
+  ShieldCheck, FileText, ChevronLeft, ChevronRight, X, Receipt, Scale, MapPin,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -40,7 +40,11 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsM
     { href: "/admin/returns", label: "Returns", icon: Undo2 },
     { href: "/admin/refunds", label: "Refunds", icon: RefreshCcw },
     { href: "/admin/shipping", label: "Shipping", icon: Truck },
+    { href: "/admin/delivery", label: "Delivery & COD", icon: MapPin },
     { href: "/admin/support", label: "Support", icon: Headphones },
+    { section: "Finance" },
+    { href: "/admin/finance", label: "Finance", icon: Receipt },
+    { href: "/admin/finance/payments", label: "Reconciliation", icon: Scale },
     { section: "System" },
     { href: "/admin/reports", label: "Reports", icon: BarChart3 },
     { href: "/admin/import-export", label: "Import/Export", icon: Upload },
@@ -106,7 +110,12 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed, isMobileOpen, setIsM
               );
             }
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/admin" &&
+                item.href !== "/admin/analytics" &&
+                pathname.startsWith(item.href + "/")) ||
+              (item.href === "/admin/analytics" && pathname.startsWith("/admin/analytics/"));
             return (
               <Link
                 key={item.href}

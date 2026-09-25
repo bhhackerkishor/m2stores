@@ -1,45 +1,26 @@
+import { contactFormSchema } from "@/validators/route-guards";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 
-interface ContactBody {
-  name?: string;
-  email?: string;
-  phone?: string;
-  subject?: string;
-  message?: string;
-}
 
 export async function POST(request: Request) {
   try {
-    const body: ContactBody = await request.json();
-
-    if (!body.name || typeof body.name !== "string" || body.name.trim().length < 2) {
+    const body = await request.json().catch(() => null);
+    const parsed = contactFormSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: { message: "Name is required (min 2 characters)" } },
+        { success: false, error: { message: parsed.error.errors[0]?.message || "Invalid submission" } },
         { status: 400 }
       );
     }
-
-    if (!body.email || typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
-      return NextResponse.json(
-        { success: false, error: { message: "A valid email address is required" } },
-        { status: 400 }
-      );
-    }
-
-    if (!body.message || typeof body.message !== "string" || body.message.trim().length < 10) {
-      return NextResponse.json(
-        { success: false, error: { message: "Message is required (min 10 characters)" } },
-        { status: 400 }
-      );
-    }
+    const { name, email, phone, subject, message } = parsed.data;
 
     const contactMessage = {
-      name: body.name.trim(),
-      email: body.email.trim(),
-      phone: body.phone?.trim() || null,
-      subject: body.subject || "General Inquiry",
-      message: body.message.trim(),
+      name,
+      email,
+      phone: phone || null,
+      subject: subject || "General Inquiry",
+      message,
       createdAt: new Date().toISOString(),
     };
 

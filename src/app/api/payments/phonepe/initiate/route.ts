@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const order: any = await Order.findOne({ orderNumber: parsed.data.orderNumber, userId: session.userId }).lean();
     if (!order) return NextResponse.json(errorResponse("NOT_FOUND", "Order not found"), { status: 404 });
-    const out = await PaymentService.initiate(parsed.data.orderNumber, parsed.data.idempotencyKey);
+    const out = await PaymentService.initiate(parsed.data.orderNumber, parsed.data.idempotencyKey, session.userId);
     return NextResponse.json(successResponse({ redirectUrl: (out.redirect as any).redirectUrl, ...out.redirect }));
   } catch (error: any) {
     if (error instanceof AppError) return NextResponse.json(errorResponse(error.code, error.message), { status: error.statusCode });

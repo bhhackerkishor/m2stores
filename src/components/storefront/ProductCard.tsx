@@ -105,7 +105,7 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
   })();
 
   return (
-    <div className="group relative bg-white dark:bg-surface-900 border border-surface-200/70 dark:border-surface-800/80 rounded-2xl transition-all duration-500 ease-out hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col h-full w-full">
+    <div className="group relative bg-white dark:bg-surface-900 border border-surface-200/70 dark:border-surface-800/80 rounded-[var(--radius-md)] transition-all duration-500 ease-out hover:shadow-[0_20px_40px_-15px_rgba(11,14,31,0.10)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col h-full w-full">
       
       {/* 1. Visual Workspace Media Container */}
       <div className="relative aspect-[4/5] w-full bg-surface-50 dark:bg-surface-950 overflow-hidden select-none shrink-0">
@@ -141,17 +141,17 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
         {/* Editorial Premium Content Overlays */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-20 pointer-events-none">
           {discount > 0 && (
-            <span className="bg-surface-950 text-white dark:bg-white dark:text-surface-950 text-[10px] font-black tracking-wider uppercase px-2.5 py-1 rounded-md shadow-md">
+            <span className="bg-danger-600 text-white text-[10px] font-black tracking-wider uppercase px-2.5 py-1 rounded-[var(--radius-xs)] shadow-md">
               {discount}% OFF
             </span>
           )}
           {product.isBestseller && (
-            <span className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-[9px] font-extrabold tracking-widest uppercase px-2.5 py-0.5 rounded-md backdrop-blur-md flex items-center gap-1">
+            <span className="bg-warning-500/10 text-warning-700 dark:text-warning-400 border border-warning-500/20 text-[9px] font-extrabold tracking-widest uppercase px-2.5 py-0.5 rounded-[var(--radius-xs)] backdrop-blur-md flex items-center gap-1">
               <Sparkles className="w-2.5 h-2.5 fill-current" /> Bestseller
             </span>
           )}
           {product.isTrending && !product.isBestseller && (
-            <span className="bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 text-[9px] font-extrabold tracking-widest uppercase px-2.5 py-0.5 rounded-md backdrop-blur-md">
+            <span className="bg-brand-500/10 text-brand-700 dark:text-brand-400 border border-brand-500/20 text-[9px] font-extrabold tracking-widest uppercase px-2.5 py-0.5 rounded-[var(--radius-xs)] backdrop-blur-md">
               Trending
             </span>
           )}
@@ -163,8 +163,8 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
           aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
           className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all duration-300 active:scale-90 z-20 border shadow-sm ${
             wishlisted
-              ? "bg-rose-500 border-rose-500 text-white shadow-md shadow-rose-500/20"
-              : "bg-white/80 dark:bg-surface-900/80 border-surface-200/40 dark:border-surface-800/40 text-surface-600 dark:text-surface-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-surface-900"
+              ? "bg-danger-500 border-danger-500 text-white shadow-md shadow-danger-500/20"
+              : "bg-white/80 dark:bg-surface-900/80 border-surface-200/40 dark:border-surface-800/40 text-surface-600 dark:text-surface-400 hover:text-danger-500 dark:hover:text-danger-400 hover:bg-white dark:hover:bg-surface-900"
           }`}
         >
           <Heart
@@ -176,14 +176,14 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
 
         {/* Minimalist Premium Hover Bottom Bar Quick View */}
         <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/40 via-black/10 to-transparent flex items-end justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out z-20 pointer-events-none">
-          <span className="w-full bg-white text-surface-950 text-xs font-bold py-2 rounded-xl shadow-xl flex items-center justify-center gap-2 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-500 delay-75">
+          <span className="w-full bg-white text-surface-950 text-xs font-bold py-2 rounded-[var(--radius-sm)] shadow-xl flex items-center justify-center gap-2 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-500 delay-75">
             <Eye className="w-3.5 h-3.5 stroke-[2.5]" /> Quick View
           </span>
         </div>
       </div>
 
       {/* 2. Structural Copy and Actions Content Window */}
-      <div className="p-4 flex flex-col flex-grow justify-between bg-white dark:bg-surface-900">
+      <div className="p-3 sm:p-4 flex flex-col flex-grow justify-between bg-white dark:bg-surface-900 min-w-0">
         <div className="space-y-1">
           {/* Accent Hierarchy Brand Flag */}
           {brandName ? (
@@ -207,13 +207,13 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
           <div className="flex items-center gap-1.5 pt-0.5">
             {product.averageRating ? (
               <>
-                <div className="flex items-center gap-0.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-md text-[11px] font-bold">
+                <div className="flex items-center gap-0.5 bg-warning-500/10 text-warning-700 dark:text-warning-400 px-1.5 py-0.5 rounded-[var(--radius-xs)] text-[11px] font-bold shrink-0">
                   <span>{product.averageRating.toFixed(1)}</span>
                   <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 </div>
-                <span className="text-[11px] text-surface-400 font-medium">
+                <span className="text-[11px] text-surface-400 font-medium truncate">
                   ({product.totalReviews || 0} reviews)
                 </span>
               </>
@@ -226,9 +226,9 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
         </div>
 
         {/* 3. Price, Shipping, and Action Matrix Base */}
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-2 sm:space-y-3 min-w-0">
           {/* Micro-Delivery Banner Context Line */}
-          <p className="text-[11px] text-surface-500 dark:text-surface-400 font-medium">
+          <p className="text-[11px] text-surface-500 dark:text-surface-400 font-medium truncate">
             Express Delivery by{" "}
             <span className="text-surface-800 dark:text-surface-200 font-semibold">
               {deliveryDate}
@@ -236,14 +236,14 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
           </p>
 
           {/* Structural Custom Typography Price Frame + CTA */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex flex-col">
+          <div className="flex items-center justify-between gap-1.5 sm:gap-3 min-w-0">
+            <div className="flex flex-col min-w-0 flex-1">
               {discount > 0 && (
-                <span className="text-xs text-surface-400 line-through">
+                <span className="text-[10px] sm:text-xs text-surface-400 line-through truncate">
                   {formatPrice(product.basePrice)}
                 </span>
               )}
-              <span className="text-base font-bold text-surface-900 dark:text-surface-50 tracking-tight">
+              <span className="price-md text-sm sm:text-base font-bold text-surface-900 dark:text-surface-50 truncate leading-tight">
                 {formatPrice(price)}
               </span>
             </div>
@@ -253,9 +253,9 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
               onClick={handleQuickAdd}
               disabled={adding}
               aria-label={added ? "Added to cart" : "Quick add to cart"}
-              className={`relative overflow-hidden h-9 px-4 rounded-xl font-bold text-xs tracking-wide uppercase transition-all duration-300 active:scale-95 flex items-center justify-center gap-1.5 select-none shrink-0 ${
+              className={`relative overflow-hidden h-8 sm:h-9 px-2.5 sm:px-4 rounded-[var(--radius-sm)] font-bold text-[11px] sm:text-xs tracking-wide uppercase transition-all duration-300 active:scale-95 flex items-center justify-center gap-1 select-none shrink-0 ${
                 added
-                  ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/10"
+                  ? "bg-accent-500 text-white shadow-md shadow-accent-500/10"
                   : adding
                   ? "bg-surface-100 dark:bg-surface-800 text-surface-400 cursor-not-allowed"
                   : "bg-surface-900 dark:bg-surface-100 text-white dark:text-surface-950 hover:bg-brand-600 dark:hover:bg-brand-500 hover:text-white dark:hover:text-white"
@@ -265,13 +265,13 @@ export function ProductCard({ product, deliveryDays = 3 }: ProductCardProps) {
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : added ? (
                 <>
-                  <Check className="w-3.5 h-3.5" />
-                  Added
+                  <Check className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden xs:inline">Added</span>
                 </>
               ) : (
                 <>
-                  <ShoppingCart className="w-3.5 h-3.5" />
-                  Add
+                  <ShoppingCart className="w-3.5 h-3.5 shrink-0" />
+                  <span>Add</span>
                 </>
               )}
             </button>

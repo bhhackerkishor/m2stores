@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(errorResponse("NOT_FOUND", "Order not found"), { status: 404 });
     }
 
-    const out = await PaymentService.initiate(parsed.data.orderNumber, parsed.data.idempotencyKey);
+    const out = await PaymentService.initiate(parsed.data.orderNumber, parsed.data.idempotencyKey, session.userId);
     const redirectUrl = out.redirect?.redirectUrl;
 
     if (!redirectUrl) {

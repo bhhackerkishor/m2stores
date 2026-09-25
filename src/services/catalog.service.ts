@@ -9,6 +9,8 @@ import { FilterQuery } from "mongoose";
 export interface ProductFilters {
   q?: string;
   categoryId?: string;
+  /** Expanded descendant ids for categoryId (root + all children). Set by listProducts/getFacets. */
+  categoryIds?: string[];
   brandId?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -59,7 +61,15 @@ export class CatalogService {
         filter.$or = [{ name: rx }, { slug: rx }, { tags: rx }];
       }
     }
-    if (f.categoryId) filter.categoryId = f.categoryId;
+    if (f.categoryIds?.length) {
+      // Root + descendant categories: match product.categoryId OR product.subcategoryId
+      filter.$and = [
+        ...(filter.$and || []),
+        { $or: [{ categoryId: { $in: f.categoryIds } }, { subcategoryId: { $in: f.categoryIds } }] },
+      ];
+    } else if (f.categoryId) {
+      filter.categoryId = f.categoryId;
+    }
     if (f.brandId) filter.brandId = f.brandId;
     if (f.minRating !== undefined) filter.averageRating = { $gte: f.minRating };
     if (f.attrs) {
@@ -108,8 +118,38 @@ export class CatalogService {
     }
   }
 
+  /** Collect rootId + every descendant category id (adjacency list walk). */
+  static async collectCategoryIds(rootId: string): Promise<string[]> {
+    await connectDB();
+    const all = await Category.find({}).select("_id parentCategoryId").lean();
+    const children = new Map<string, string[]>();
+    for (const c of all as any[]) {
+      const p = c.parentCategoryId ? String(c.parentCategoryId) : null;
+      if (p) children.set(p, [...(children.get(p) || []), String(c._id)]);
+    }
+    const out: string[] = [];
+    const seen = new Set<string>();
+    const queue = [String(rootId)];
+    while (queue.length) {
+      const id = queue.shift()!;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+      for (const ch of children.get(id) || []) queue.push(ch);
+    }
+    return out;
+  }
+
+  private static async expandCategory(f: ProductFilters): Promise<ProductFilters> {
+    if (f.categoryId && !f.categoryIds) {
+      return { ...f, categoryIds: await this.collectCategoryIds(f.categoryId) };
+    }
+    return f;
+  }
+
   static async listProducts(f: ProductFilters) {
     await connectDB();
+    f = await this.expandCategory(f);
     const page = Math.max(1, f.page || 1);
     const limit = Math.min(50, Math.max(1, f.limit || 12));
     const filter = this.buildFilter(f);
@@ -150,10 +190,11 @@ export class CatalogService {
 
   static async getRelatedProducts(productId: string, categoryId: string, brandId?: string, limit = 8) {
     await connectDB();
-    // Deterministic rules: same category first, then same brand, then trending
+    // Same category family (root + descendants) first, then same brand, then trending
+    const catIds = await this.collectCategoryIds(categoryId);
     const sameCategory = await Product.find({
       _id: { $ne: productId },
-      categoryId,
+      $or: [{ categoryId: { $in: catIds } }, { subcategoryId: { $in: catIds } }],
       status: "PUBLISHED",
     })
       .sort({ isBestseller: -1, averageRating: -1 })
@@ -186,7 +227,8 @@ export class CatalogService {
    */
   static async getFacets(f: ProductFilters) {
     await connectDB();
-    const scope: ProductFilters = { ...f, page: 1, limit: 1 };
+    const expanded = await this.expandCategory(f);
+    const scope: ProductFilters = { ...expanded, page: 1, limit: 1 };
     delete (scope as any).attrs;
     const filter = this.buildFilter(scope);
     // Apply inStock scope to facets too

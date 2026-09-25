@@ -49,6 +49,12 @@ export class CheckoutService {
     const shippingOptions = await ShippingService.options(pricing.subtotal - pricing.couponDiscount, shippingMethod);
     const selectedShipping = { ...shippingOptions.find((o) => o.method === shippingMethod)!, fee: pricing.shippingFee };
 
+    // Delivery serviceability (admin-configured pincode rules)
+    const deliveryCheck = await ShippingService.checkDelivery(address.pincode);
+    if (!deliveryCheck.deliverable) {
+      throw new AppError(deliveryCheck.reason || `We do not deliver to pincode ${address.pincode}`, 400, "DELIVERY_UNAVAILABLE");
+    }
+
     let codCheck: any = { eligible: paymentMethod !== "COD", fee: 0 };
     if (paymentMethod === "COD") {
       codCheck = await ShippingService.checkCOD(pricing.subtotal - pricing.couponDiscount, address.pincode);
@@ -63,7 +69,8 @@ export class CheckoutService {
       shippingOptions,
       selectedShipping,
       codCheck,
-      shippable: true,
+      deliveryCheck,
+      shippable: deliveryCheck.deliverable,
     };
   }
 

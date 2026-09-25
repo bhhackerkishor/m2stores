@@ -1,3 +1,4 @@
+import { resetPasswordOtpSchema } from "@/validators/route-guards";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
@@ -8,18 +9,18 @@ import bcrypt from "bcryptjs";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { identifier, otp, newPassword } = body;
-
-    if (!identifier || !otp || !newPassword) {
-      return NextResponse.json(errorResponse("VALIDATION_ERROR", "All fields are required"), { status: 400 });
+    const body = await request.json().catch(() => null);
+    const parsed = resetPasswordOtpSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "All fields are required"),
+        { status: 400 }
+      );
     }
-
-    if (newPassword.length < 8) {
-      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Password must be at least 8 characters"), { status: 400 });
-    }
+    const { identifier, otp, newPassword } = parsed.data;
 
     await connectDB();
     const result = await verifyStoredOTP(identifier, otp);

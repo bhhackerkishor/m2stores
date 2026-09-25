@@ -1,3 +1,4 @@
+import { updateEtaSchema } from "@/validators/route-guards";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth-server";
 import { hasPermission } from "@/config/permissions";
@@ -6,6 +7,7 @@ import { connectDB } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { AppError } from "@/lib/errors";
+
 
 /**
  * POST /api/admin/orders/[id]/delivery/update-eta
@@ -19,15 +21,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json(errorResponse("FORBIDDEN", "Permission required"), { status: 403 });
     }
     const { id } = await params;
-    const body = await request.json();
-    const { estimatedDelivery, reason } = body;
-
-    if (!estimatedDelivery) {
-      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Estimated delivery date is required"), { status: 400 });
+    const body = await request.json().catch(() => null);
+    const parsed = updateEtaSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Estimated delivery date is required"),
+        { status: 400 }
+      );
     }
-    if (!reason?.trim() || reason.trim().length < 3) {
-      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Reason is required (min 3 characters)"), { status: 400 });
-    }
+    const { estimatedDelivery, reason } = parsed.data;
 
     const newDate = new Date(estimatedDelivery);
     if (isNaN(newDate.getTime()) || newDate < new Date()) {

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { Brand } from "@/models/Brand";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { brandUpdateSchema } from "@/validators/catalog";
 
 async function findBrand(slugOrId: string) {
   await connectDB();
@@ -31,8 +32,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { requirePermission } = await import("@/lib/auth-server");
     await requirePermission("brands.write");
     const { slug } = await params;
-    const body = await request.json();
-    const { name, logo, description, isActive } = body;
+    const body = await request.json().catch(() => null);
+    const parsed = brandUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Invalid brand data"),
+        { status: 400 }
+      );
+    }
+    const { name, logo, description, isActive } = parsed.data;
 
     const brand: any = await findBrand(slug);
     if (!brand) {

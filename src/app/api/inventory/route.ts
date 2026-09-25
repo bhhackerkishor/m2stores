@@ -4,18 +4,18 @@ import { InventoryState } from "@/models/Inventory";
 import { Product } from "@/models/Product";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { inventoryCheckQuerySchema, inventoryCheckSchema } from "@/validators/catalog";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = request.nextUrl;
-    const sku = searchParams.get("sku");
-    const productId = searchParams.get("productId");
-
-    await connectDB();
-
-    if (!sku && !productId) {
+    const raw = Object.fromEntries(request.nextUrl.searchParams.entries());
+    const parsedQuery = inventoryCheckQuerySchema.safeParse(raw);
+    if (!parsedQuery.success || (!parsedQuery.data.sku && !parsedQuery.data.productId)) {
       return NextResponse.json(errorResponse("VALIDATION_ERROR", "sku or productId query parameter is required"), { status: 400 });
     }
+    const { sku, productId } = parsedQuery.data;
+
+    await connectDB();
 
     const filter: any = {};
     if (sku) filter.sku = sku.toUpperCase();
@@ -41,12 +41,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { productId, sku, quantity } = body;
-
-    if (!productId || !sku || !quantity || quantity < 1) {
+    const body = await request.json().catch(() => null);
+    const parsed = inventoryCheckSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(errorResponse("VALIDATION_ERROR", "productId, sku, and quantity are required"), { status: 400 });
     }
+    const { productId, sku, quantity } = parsed.data;
 
     await connectDB();
 

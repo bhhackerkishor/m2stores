@@ -119,9 +119,12 @@ export async function PUT(
     if (error?.code === "UNAUTHORIZED" || error?.code === "FORBIDDEN") {
       return NextResponse.json(errorResponse(error.code, error.message), { status: error.statusCode });
     }
+    // Never echo driver/schema internals — log them, return a generic footprint.
+    logger.error("Product update failed", "product", { error: String(error?.message || error) });
+    const isValidationError = error?.name === "ValidationError" || error?.name === "CastError" || error?.code === 11000;
     return NextResponse.json(
-      errorResponse("UPDATE_FAILED", error.message || "Failed to update product"),
-      { status: 400 }
+      errorResponse(isValidationError ? "VALIDATION_ERROR" : "UPDATE_FAILED", isValidationError ? "Invalid product data" : "Failed to update product"),
+      { status: isValidationError ? 400 : 500 }
     );
   }
 }

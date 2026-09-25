@@ -1,3 +1,4 @@
+import { forgotPasswordRequestSchema } from "@/validators/route-guards";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
@@ -5,14 +6,15 @@ import { generateOTP, hashOTP } from "@/lib/otp";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { identifier } = body;
-
-    if (!identifier) {
+    const body = await request.json().catch(() => null);
+    const parsed = forgotPasswordRequestSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(errorResponse("VALIDATION_ERROR", "Email or phone is required"), { status: 400 });
     }
+    const { identifier } = parsed.data;
 
     await connectDB();
     const user = await User.findOne({

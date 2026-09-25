@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { EmptyCart } from "@/components/ui/empty-state";
 import { CartPageSkeleton } from "@/components/ui/skeleton";
+import { VariantChips } from "@/components/ui/variant-chips";
 import { formatPrice } from "@/lib/utils";
 import { Trash2, Heart, Minus, Plus, Truck, Tag, ArrowRight } from "lucide-react";
 
@@ -157,6 +158,7 @@ export default function CartPage() {
                   {item.name}
                 </Link>
                 <p className="text-[11px] text-surface-400 dark:text-surface-500 font-mono mt-0.5">{item.sku}</p>
+                <VariantChips attributes={item.attributes} />
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="price">{formatPrice(item.unitPrice)}</span>
                   {item.discount > 0 && (

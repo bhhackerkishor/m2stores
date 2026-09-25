@@ -237,7 +237,13 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                       <div className="ml-1 min-w-0">
                         <p className="text-sm font-medium text-surface-800 dark:text-surface-200 truncate max-w-xs sm:max-w-md">
                           {itemsList
-                            .map((i: any) => i.nameSnapshot || i.name)
+                            .map((i: any) => {
+                              const base = i.nameSnapshot || i.name;
+                              const attrs = i.attributesSnapshot
+                                ? Object.values(i.attributesSnapshot).filter(Boolean).join("/")
+                                : "";
+                              return attrs ? `${base} (${attrs})` : base;
+                            })
                             .filter(Boolean)
                             .join(", ") || "Order Items"}
                         </p>

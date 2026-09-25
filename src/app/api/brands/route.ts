@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import { Brand } from "@/models/Brand";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { brandSchema } from "@/validators/catalog";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,8 +25,15 @@ export async function POST(request: NextRequest) {
   try {
     const { requirePermission } = await import("@/lib/auth-server");
     await requirePermission("brands.write");
-    const body = await request.json();
-    const { name, logo, description } = body;
+    const body = await request.json().catch(() => null);
+    const parsed = brandSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Invalid brand data"),
+        { status: 400 }
+      );
+    }
+    const { name, logo, description } = parsed.data;
 
     await connectDB();
     const existing = await Brand.findOne({ slug: name.toLowerCase().replace(/\s+/g, "-") });

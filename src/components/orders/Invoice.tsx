@@ -115,6 +115,12 @@ export function Invoice({ order, className }: InvoiceProps) {
     return {
       name: item.name || item.nameSnapshot || "Product",
       sku: item.sku || "",
+      attrs: item.attributesSnapshot
+        ? Object.entries(item.attributesSnapshot as Record<string, any>)
+            .filter(([, v]) => v !== undefined && v !== null && v !== "")
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(" · ")
+        : "",
       hsn: item.hsnCode || "",
       qty,
       rate,
@@ -159,7 +165,7 @@ export function Invoice({ order, className }: InvoiceProps) {
         className="invoice-card relative overflow-hidden bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl text-[11px] leading-relaxed text-surface-800 dark:text-surface-200 shadow-sm print:shadow-none print:border-none print:rounded-none [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
       >
         {/* Brand accent rule */}
-        <div className="h-1.5 w-full bg-indigo-600 dark:bg-indigo-500 print:h-1" />
+        <div className="h-1.5 w-full bg-brand-600 dark:bg-brand-500 print:h-1" />
 
         <div className="p-5 sm:p-8 print:p-0 print:text-[10px]">
           {/* Letterhead */}
@@ -282,6 +288,11 @@ export function Invoice({ order, className }: InvoiceProps) {
                     <td className="p-2.5 print:p-1.5 text-surface-400 dark:text-surface-500">{i + 1}</td>
                     <td className="p-2.5 print:p-1.5 font-medium text-surface-900 dark:text-surface-100">
                       {it.name}
+                      {it.attrs && (
+                        <div className="text-[9px] font-semibold text-surface-500 dark:text-surface-400">
+                          {it.attrs}
+                        </div>
+                      )}
                       {it.sku && (
                         <div className="text-[9px] font-normal text-surface-400 dark:text-surface-500 font-mono">
                           SKU {it.sku}
@@ -378,7 +389,7 @@ export function Invoice({ order, className }: InvoiceProps) {
               )}
               <div className="flex justify-between items-baseline font-bold text-base text-surface-900 dark:text-surface-50 border-t border-surface-900/20 dark:border-surface-100/20 pt-2 mt-2">
                 <span>Total</span>
-                <span className="font-mono text-indigo-600 dark:text-indigo-400">{formatPrice(grandTotal)}</span>
+                <span className="font-mono text-brand-600 dark:text-brand-400">{formatPrice(grandTotal)}</span>
               </div>
             </div>
           </div>

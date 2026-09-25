@@ -1,3 +1,4 @@
+import { verifyOtpRequestSchema } from "@/validators/route-guards";
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models/User";
@@ -5,10 +6,10 @@ import { verifyStoredOTP } from "@/lib/otp";
 import { generateToken } from "@/lib/auth";
 import { invalidateSession } from "@/lib/auth-server";
 import { cookies } from "next/headers";
-import { loginSchema } from "@/validators/auth";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { checkRateLimit, clientIp, LIMITS } from "@/lib/rate-limit";
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +19,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(errorResponse("RATE_LIMITED", "Too many verification attempts. Please try again later."), { status: 429 });
     }
 
-    const body = await request.json();
-    const { identifier, otp, type } = body;
-
-    if (!identifier || !otp) {
-      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Identifier and OTP are required"), { status: 400 });
+    const body = await request.json().catch(() => null);
+    const parsed = verifyOtpRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Identifier and a 6-digit OTP are required"), { status: 400 });
     }
+    const { identifier, otp, type: _type } = parsed.data;
 
     await connectDB();
     const result = await verifyStoredOTP(identifier, otp);

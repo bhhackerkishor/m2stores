@@ -1,7 +1,9 @@
+import { releaseExpiredSchema } from "@/validators/route-guards";
 import { NextRequest, NextResponse } from "next/server";
 import { InventoryService } from "@/services/inventory.service";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
+
 
 /**
  * Release expired ACTIVE reservations. Intended for cron (e.g. Vercel Cron).
@@ -16,8 +18,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(errorResponse("UNAUTHORIZED", "Invalid cron secret"), { status: 401 });
       }
     }
-    const body = await request.json().catch(() => ({}));
-    const result = await InventoryService.releaseExpired(body.limit || 100);
+    const body = await request.json().catch(() => null);
+    const parsed = releaseExpiredSchema.safeParse(body ?? {});
+    if (!parsed.success) {
+      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Invalid release payload"), { status: 400 });
+    }
+    const result = await InventoryService.releaseExpired(parsed.data.limit ?? 100);
     return NextResponse.json(successResponse(result));
   } catch (error) {
     logger.error("Release-expired error", "inventory", { error: String(error) });

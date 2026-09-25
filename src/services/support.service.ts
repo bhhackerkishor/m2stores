@@ -105,7 +105,8 @@ export class SupportService {
 
   static async customerClose(ticketId: string, userId: string) {
     await connectDB();
-    const t: any = await SupportTicket.findOne({ _id: ticketId, userId });
+    // Ownership must be part of the filter — never fetched first (BOLA guard)
+    const t: any = await SupportTicket.findOne({ _id: ticketId, user: userId });
     if (!t) throw new AppError("Ticket not found", 404, "NOT_FOUND");
     if (!CUSTOMER_CLOSEABLE.includes(t.status)) throw new AppError(`Cannot close from ${t.status}`, 400, "INVALID_STATUS");
     t.status = "CLOSED";

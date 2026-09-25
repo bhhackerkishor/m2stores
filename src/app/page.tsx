@@ -41,13 +41,13 @@ export const metadata = {
 // Reusable Loading Skeleton for Banner & Sections
 function BannerSkeleton() {
   return (
-    <div className="w-full h-full min-h-[320px] rounded-2xl bg-surface-200/60 dark:bg-surface-800/60 animate-pulse border border-surface-300/40 dark:border-surface-700/40 flex flex-col justify-between p-6">
+    <div className="w-full h-full min-h-[320px] rounded-[var(--radius-lg)] bg-surface-200/60 dark:bg-surface-800/60 animate-pulse border border-surface-300/40 dark:border-surface-700/40 flex flex-col justify-between p-6">
       <div className="space-y-3">
         <div className="h-6 w-32 bg-surface-300 dark:bg-surface-700 rounded-full" />
-        <div className="h-8 w-3/4 bg-surface-300 dark:bg-surface-700 rounded-lg" />
-        <div className="h-4 w-1/2 bg-surface-300 dark:bg-surface-700 rounded-lg" />
+        <div className="h-8 w-3/4 bg-surface-300 dark:bg-surface-700 rounded-[var(--radius-sm)]" />
+        <div className="h-4 w-1/2 bg-surface-300 dark:bg-surface-700 rounded-[var(--radius-sm)]" />
       </div>
-      <div className="h-10 w-36 bg-surface-300 dark:bg-surface-700 rounded-xl" />
+      <div className="h-10 w-36 bg-surface-300 dark:bg-surface-700 rounded-[var(--radius-sm)]" />
     </div>
   );
 }
@@ -111,32 +111,36 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100 transition-colors duration-300 antialiased selection:bg-brand-500 selection:text-white">
-      {/* Top Banner Announcement Strip */}
-      <div className="bg-brand-950 text-brand-200 text-[11px] sm:text-xs py-2.5 px-4 text-center font-medium tracking-wide border-b border-brand-800/40 flex items-center justify-center gap-2 shadow-inner">
+      {/* Top Banner Announcement Strip — a thin marigold edge ties it to the ticket motif below */}
+      <div className="bg-brand-950 text-brand-200 text-[11px] sm:text-xs py-2.5 px-4 text-center font-medium tracking-wide border-b-2 border-warning-500/70 flex items-center justify-center gap-2">
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-500" />
         </span>
         <span>Express Pan-India Delivery within 2–4 Business Days | Cash on Delivery Available</span>
       </div>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-950 via-brand-900 to-surface-950 text-white py-14 sm:py-20 lg:py-24">
+      {/* Hero Section — a flat ink panel with a receipt-paper texture, built around a torn-coupon device rather than a floating stock photo */}
+      <section className="relative overflow-hidden bg-brand-950 text-white py-14 sm:py-20 lg:py-24">
         <div
-          className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.06)_0%,transparent_65%)] pointer-events-none"
+          className="absolute inset-0 pointer-events-none opacity-60"
+          style={{
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
+            backgroundSize: "20px 20px",
+          }}
           aria-hidden="true"
         />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-            
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+
             {/* Left Column - Hero Dynamic Content */}
             <div className="lg:col-span-7 space-y-6 text-left">
-              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-300 bg-brand-900/90 border border-brand-700/60 px-4 py-1.5 rounded-full backdrop-blur-md shadow-md">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 text-sm font-semibold text-warning-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-warning-400 shrink-0" />
                 {hero?.title || "Grand Summer Sale"}
-              </span>
+              </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08] text-balance">
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.08] text-balance">
                 {hero?.subtitle || "Up to 50% Off on Electronics & Fashion"}
               </h1>
 
@@ -144,33 +148,43 @@ export default async function HomePage() {
                 Shop 100% genuine products with PhonePe instant checkout, Cash on Delivery, hassle-free 7-day returns, and dedicated customer support.
               </p>
 
-              {/* Search Bar Integration */}
-              <div className="max-w-xl pt-2">
+              {/* Search Bar — styled like a punched coupon stub, cut into the ink background on either side */}
+              <div className="relative max-w-xl pt-2">
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-brand-950 z-10"
+                  aria-hidden="true"
+                />
+                <span
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-brand-950 z-10"
+                  aria-hidden="true"
+                />
                 <SearchAutocomplete />
               </div>
 
-              {/* Trust Value Props */}
-              <div className="pt-2 flex flex-wrap items-center gap-5 sm:gap-6 text-xs sm:text-sm font-semibold text-brand-200/90">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>Free Shipping over ₹{freeShippingThreshold}</span>
+              {/* Trust Value Props — set like line items on a receipt, dashed dividers instead of a checkmark row */}
+              <div className="pt-3 flex flex-wrap items-center text-xs sm:text-sm font-semibold text-brand-200/90">
+                <div className="flex items-center gap-2 pr-5">
+                  <CheckCircle2 className="w-4 h-4 text-accent-400 shrink-0" />
+                  <span>Free shipping over ₹{freeShippingThreshold}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>7-Day Easy Returns</span>
+                <div className="flex items-center gap-2 px-5 border-l border-dashed border-brand-700">
+                  <CheckCircle2 className="w-4 h-4 text-accent-400 shrink-0" />
+                  <span>7-day easy returns</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>100% Genuine Guarantee</span>
+                <div className="flex items-center gap-2 pl-5 border-l border-dashed border-brand-700">
+                  <CheckCircle2 className="w-4 h-4 text-accent-400 shrink-0" />
+                  <span>100% genuine guarantee</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Column - Dynamic Banner Image with Lazy-loading Skeleton */}
+            {/* Right Column — either the CMS hero banner in a clipped tag frame, or a stack of real category tags */}
             <div className="lg:col-span-5 hidden lg:block">
               <Suspense fallback={<BannerSkeleton />}>
                 {hero?.image?.url ? (
-                  <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-white/10 group transition-all duration-500 hover:shadow-brand-500/20 hover:scale-[1.01]">
+                  <div
+                    className="relative w-full aspect-[4/3] overflow-hidden shadow-2xl border border-white/10 group transition-all duration-500 hover:scale-[1.01] [clip-path:polygon(0_0,calc(100%-28px)_0,100%_28px,100%_100%,0_100%)]"
+                  >
                     <Image
                       src={hero.image.url}
                       alt={hero.title || "Hero Banner"}
@@ -180,40 +194,44 @@ export default async function HomePage() {
                       sizes="(max-width: 1200px) 100vw, 500px"
                       className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-brand-950/10 to-transparent" />
+                    <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 bg-warning-500 text-brand-950 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-[var(--radius-xs)]">
+                      Featured
+                    </span>
                     {hero.link && (
-                      <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center">
+                      <div className="absolute bottom-6 left-6 right-6">
                         <Link
                           href={hero.link}
-                          className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider bg-white/90 hover:bg-white text-surface-950 px-4 py-2.5 rounded-xl shadow-lg backdrop-blur-md transition-all duration-200 hover:gap-3"
+                          className="inline-flex items-center gap-2 text-xs font-bold bg-white hover:bg-brand-50 text-surface-950 px-4 py-2.5 rounded-[var(--radius-sm)] shadow-lg transition-all duration-200 hover:gap-3"
                         >
-                          <span>Explore Deals</span>
+                          <span>Explore deals</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="relative mx-auto w-full max-w-md aspect-square rounded-2xl bg-gradient-to-tr from-brand-600/30 to-brand-400/10 border border-white/10 p-4 shadow-2xl backdrop-blur-sm">
-                    <div className="w-full h-full rounded-xl bg-surface-900/70 border border-white/10 p-6 flex flex-col justify-between">
-                      <div className="space-y-3">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-xs font-bold uppercase tracking-wider">
-                          <Tag className="w-3.5 h-3.5" />
-                          Featured Collection
-                        </span>
-                        <h3 className="text-2xl font-bold text-white">Smart Electronics & Wearables</h3>
-                        <p className="text-xs text-brand-200/80 leading-relaxed">
-                          Upgrade your everyday setup with original certified tech and accessories.
-                        </p>
-                      </div>
+                  <div className="space-y-4">
+                    {categories.slice(0, 3).map((category: any, i: number) => (
                       <Link
-                        href="/shop"
-                        className="inline-flex items-center justify-center gap-2 font-bold text-sm bg-brand-500 hover:bg-brand-400 text-white py-3 px-6 rounded-xl transition-all duration-200 shadow-lg group hover:shadow-brand-500/30"
+                        key={String(category._id)}
+                        href={`/category/${category.slug}`}
+                        style={{ transform: `rotate(${i === 0 ? "-1.5deg" : i === 1 ? "1deg" : "-0.5deg"})` }}
+                        className="group relative flex items-center justify-between gap-4 bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 px-5 py-4 transition-all duration-300 [clip-path:polygon(0_0,calc(100%-20px)_0,100%_20px,100%_100%,0_100%)]"
                       >
-                        <span>Explore Catalog</span>
-                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                        <span
+                          className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-warning-400"
+                          aria-hidden="true"
+                        />
+                        <div className="pl-3">
+                          <p className="text-[10px] uppercase tracking-wide text-brand-300 font-semibold">
+                            Shop the category
+                          </p>
+                          <h3 className="font-display text-lg font-bold text-white">{category.name}</h3>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-brand-300 group-hover:translate-x-1 group-hover:text-warning-400 transition-all shrink-0" />
                       </Link>
-                    </div>
+                    ))}
                   </div>
                 )}
               </Suspense>
@@ -230,7 +248,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div className="flex flex-col items-center gap-3 group">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20 text-green-600 border border-green-200/60 dark:border-green-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-green-100">
+              <div className="w-14 h-14 rounded-[var(--radius-md)] bg-gradient-to-br from-accent-50 to-accent-100 dark:from-accent-950/40 dark:to-accent-900/20 text-accent-600 border border-accent-200/60 dark:border-accent-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-accent-100">
                 <Truck className="w-7 h-7" />
               </div>
               <div>
@@ -242,7 +260,7 @@ export default async function HomePage() {
             </div>
 
             <div className="flex flex-col items-center gap-3 group">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20 text-blue-600 border border-blue-200/60 dark:border-blue-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-blue-100">
+              <div className="w-14 h-14 rounded-[var(--radius-md)] bg-gradient-to-br from-brand-50 to-brand-100 dark:from-brand-950/40 dark:to-brand-900/20 text-brand-600 border border-brand-200/60 dark:border-brand-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-brand-100">
                 <ShieldCheck className="w-7 h-7" />
               </div>
               <div>
@@ -254,7 +272,7 @@ export default async function HomePage() {
             </div>
 
             <div className="flex flex-col items-center gap-3 group">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/20 text-amber-600 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-amber-100">
+              <div className="w-14 h-14 rounded-[var(--radius-md)] bg-gradient-to-br from-warning-50 to-warning-100 dark:from-warning-950/40 dark:to-warning-900/20 text-warning-600 border border-warning-200/60 dark:border-warning-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-warning-100">
                 <RotateCcw className="w-7 h-7" />
               </div>
               <div>
@@ -266,7 +284,7 @@ export default async function HomePage() {
             </div>
 
             <div className="flex flex-col items-center gap-3 group">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/20 text-purple-600 border border-purple-200/60 dark:border-purple-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-purple-100">
+              <div className="w-14 h-14 rounded-[var(--radius-md)] bg-gradient-to-br from-danger-50 to-danger-100 dark:from-danger-950/40 dark:to-danger-900/20 text-danger-600 border border-danger-200/60 dark:border-danger-800/40 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-danger-100">
                 <Headphones className="w-7 h-7" />
               </div>
               <div>
@@ -285,23 +303,23 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs text-surface-500 dark:text-surface-400">
             <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-green-600" />
+              <Lock className="w-4 h-4 text-accent-600" />
               <span className="font-semibold">SSL Encrypted Checkout</span>
             </div>
             <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-blue-600" />
+              <CreditCard className="w-4 h-4 text-brand-600" />
               <span className="font-semibold">PhonePe Secured Payments</span>
             </div>
             <div className="flex items-center gap-2">
-              <BadgeCheck className="w-4 h-4 text-amber-600" />
+              <BadgeCheck className="w-4 h-4 text-warning-600" />
               <span className="font-semibold">GST Invoice Available</span>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-purple-600" />
+              <Clock className="w-4 h-4 text-brand-500" />
               <span className="font-semibold">Same Day Dispatch</span>
             </div>
             <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <Star className="w-4 h-4 text-warning-500 fill-warning-500" />
               <span className="font-semibold">4.8★ Customer Rating</span>
             </div>
           </div>
@@ -313,7 +331,7 @@ export default async function HomePage() {
         <section aria-label="Shop by category">
           <div className="flex items-baseline justify-between mb-8">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-surface-900 dark:text-surface-50">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-50">
                 Shop by Category
               </h2>
               <p className="text-xs sm:text-sm text-surface-500 dark:text-surface-400 mt-1">
@@ -376,7 +394,7 @@ export default async function HomePage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-surface-900 dark:text-surface-50 flex items-center gap-2">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-50 flex items-center gap-2">
                 <span>Exclusive Deals & Offers</span>
                 <Tag className="w-6 h-6 text-brand-500 animate-bounce" />
               </h2>
@@ -398,14 +416,14 @@ export default async function HomePage() {
               <Link
                 key={String(offer._id)}
                 href="/coupons"
-                className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-r from-brand-700 via-brand-600 to-indigo-600 text-white shadow-card hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+                className="group relative overflow-hidden rounded-[var(--radius-lg)] p-6 bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 text-white shadow-card hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
               >
                 <div className="flex flex-col h-full justify-between space-y-4 relative z-10">
                   <div>
                     <span className="inline-block text-[10px] font-bold uppercase tracking-widest bg-white/20 px-2.5 py-1 rounded-full text-white backdrop-blur-md">
                       {String(offer.type).replace(/_/g, " ")}
                     </span>
-                    <h3 className="text-lg font-bold mt-2 group-hover:translate-x-1 transition-transform duration-200">
+                    <h3 className="font-display text-lg font-bold mt-2 group-hover:translate-x-1 transition-transform duration-200">
                       {offer.title}
                     </h3>
                   </div>
@@ -422,7 +440,7 @@ export default async function HomePage() {
         <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <Link
             href={promo.link || "/shop"}
-            className="group relative block w-full h-48 sm:h-64 rounded-3xl overflow-hidden shadow-xl border border-surface-200 dark:border-surface-800"
+            className="group relative block w-full h-48 sm:h-64 rounded-[var(--radius-lg)] overflow-hidden shadow-xl border border-surface-200 dark:border-surface-800"
           >
             <Image
               src={promo.image.url}
@@ -432,10 +450,10 @@ export default async function HomePage() {
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent p-6 sm:p-10 flex flex-col justify-center max-w-xl text-white">
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-warning-400 mb-2">
                 Special Promotion
               </span>
-              <h3 className="text-2xl sm:text-4xl font-extrabold tracking-tight">{promo.title}</h3>
+              <h3 className="font-display text-2xl sm:text-4xl font-bold tracking-tight">{promo.title}</h3>
               {promo.subtitle && <p className="text-xs sm:text-sm text-surface-200 mt-2 line-clamp-2">{promo.subtitle}</p>}
             </div>
           </Link>
@@ -447,7 +465,7 @@ export default async function HomePage() {
         <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <section aria-label="Deals under 500">
             <div className="flex items-baseline justify-between mb-6">
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-surface-900 dark:text-surface-50">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-50">
                 Deals Under ₹500
               </h2>
               <Link href="/shop?maxPrice=500" className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 hover:underline group">
@@ -469,7 +487,7 @@ export default async function HomePage() {
         <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <section aria-label="Deals under 1000">
             <div className="flex items-baseline justify-between mb-6">
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-surface-900 dark:text-surface-50">
+              <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-50">
                 Deals Under ₹1000
               </h2>
               <Link href="/shop?maxPrice=1000" className="inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 hover:underline group">
@@ -490,9 +508,9 @@ export default async function HomePage() {
       <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <section aria-label="Trending products">
           <div className="flex items-baseline justify-between mb-6">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-surface-900 dark:text-surface-50 flex items-center gap-2">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-50 flex items-center gap-2">
               <span>Trending Now</span>
-              <Flame className="w-6 h-6 text-amber-500 fill-amber-500 animate-pulse" />
+              <Flame className="w-6 h-6 text-warning-500 fill-warning-500 animate-pulse" />
             </h2>
             <Link
               href="/shop?sort=popularity"
@@ -518,9 +536,9 @@ export default async function HomePage() {
       <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <section aria-label="Bestsellers">
           <div className="flex items-baseline justify-between mb-6">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-surface-900 dark:text-surface-50 flex items-center gap-2">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-50 flex items-center gap-2">
               <span>Bestsellers</span>
-              <Trophy className="w-6 h-6 text-amber-400" />
+              <Trophy className="w-6 h-6 text-warning-400" />
             </h2>
             <Link
               href="/shop"
@@ -546,7 +564,7 @@ export default async function HomePage() {
       <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <section aria-label="Featured products">
           <div className="flex items-baseline justify-between mb-6">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-surface-900 dark:text-surface-50 flex items-center gap-2">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-surface-900 dark:text-surface-50 flex items-center gap-2">
               <span>Featured Collections</span>
               <Sparkles className="w-6 h-6 text-brand-500" />
             </h2>
@@ -578,7 +596,7 @@ export default async function HomePage() {
               <BadgeCheck className="w-3.5 h-3.5" />
               Verified Reviews
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">
+            <h2 className="font-display text-2xl sm:text-3xl font-bold text-surface-900 dark:text-surface-50">
               Trusted by Shoppers Across India
             </h2>
             <p className="text-xs sm:text-sm text-surface-500 dark:text-surface-400 mt-2">
@@ -587,50 +605,50 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-card hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-1 text-amber-400 mb-3 text-sm">
+            <div className="p-6 bg-white dark:bg-surface-900 rounded-[var(--radius-md)] border border-surface-200 dark:border-surface-800 shadow-card hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-1 text-warning-400 mb-3 text-sm">
                 ★★★★★
               </div>
               <p className="text-xs sm:text-sm text-surface-700 dark:text-surface-300 leading-relaxed mb-4">
                 &ldquo;Super fast delivery to Chennai! The product was genuine and packed securely. Paid via PhonePe smoothly. Will order again!&rdquo;
               </p>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-xs">RK</div>
+                <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 font-bold text-xs">RK</div>
                 <div>
                   <div className="font-bold text-xs text-surface-900 dark:text-surface-100">Rajesh K.</div>
-                  <div className="text-[10px] text-green-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
+                  <div className="text-[10px] text-accent-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-card hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-1 text-amber-400 mb-3 text-sm">
+            <div className="p-6 bg-white dark:bg-surface-900 rounded-[var(--radius-md)] border border-surface-200 dark:border-surface-800 shadow-card hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-1 text-warning-400 mb-3 text-sm">
                 ★★★★★
               </div>
               <p className="text-xs sm:text-sm text-surface-700 dark:text-surface-300 leading-relaxed mb-4">
                 &ldquo;Easy return process when I ordered the wrong size. Support team resolved it within 24 hours. Very professional!&rdquo;
               </p>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 font-bold text-xs">PS</div>
+                <div className="w-8 h-8 rounded-full bg-danger-100 dark:bg-danger-900/30 flex items-center justify-center text-danger-600 font-bold text-xs">PS</div>
                 <div>
                   <div className="font-bold text-xs text-surface-900 dark:text-surface-100">Priya S.</div>
-                  <div className="text-[10px] text-green-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
+                  <div className="text-[10px] text-accent-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
                 </div>
               </div>
             </div>
 
-            <div className="p-6 bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-card hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-1 text-amber-400 mb-3 text-sm">
+            <div className="p-6 bg-white dark:bg-surface-900 rounded-[var(--radius-md)] border border-surface-200 dark:border-surface-800 shadow-card hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-1 text-warning-400 mb-3 text-sm">
                 ★★★★★
               </div>
               <p className="text-xs sm:text-sm text-surface-700 dark:text-surface-300 leading-relaxed mb-4">
                 &ldquo;Best prices compared to Amazon/Flipkart for the same genuine products. COD option is a plus. Highly recommended!&rdquo;
               </p>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-bold text-xs">AV</div>
+                <div className="w-8 h-8 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 font-bold text-xs">AV</div>
                 <div>
                   <div className="font-bold text-xs text-surface-900 dark:text-surface-100">Amit V.</div>
-                  <div className="text-[10px] text-green-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
+                  <div className="text-[10px] text-accent-600 font-semibold flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Verified Buyer</div>
                 </div>
               </div>
             </div>
@@ -639,19 +657,19 @@ export default async function HomePage() {
           {/* Trust Stats */}
           <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div className="p-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">50K+</div>
+              <div className="font-display text-2xl sm:text-3xl font-bold text-surface-900 dark:text-surface-50">50K+</div>
               <div className="text-xs text-surface-500 dark:text-surface-400 mt-1 font-medium">Happy Customers</div>
             </div>
             <div className="p-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">4.8★</div>
+              <div className="font-display text-2xl sm:text-3xl font-bold text-surface-900 dark:text-surface-50">4.8★</div>
               <div className="text-xs text-surface-500 dark:text-surface-400 mt-1 font-medium">Average Rating</div>
             </div>
             <div className="p-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">99%</div>
+              <div className="font-display text-2xl sm:text-3xl font-bold text-surface-900 dark:text-surface-50">99%</div>
               <div className="text-xs text-surface-500 dark:text-surface-400 mt-1 font-medium">On-Time Delivery</div>
             </div>
             <div className="p-4">
-              <div className="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-surface-50">100%</div>
+              <div className="font-display text-2xl sm:text-3xl font-bold text-surface-900 dark:text-surface-50">100%</div>
               <div className="text-xs text-surface-500 dark:text-surface-400 mt-1 font-medium">Genuine Products</div>
             </div>
           </div>
@@ -660,9 +678,9 @@ export default async function HomePage() {
 
       {/* Newsletter Signup Block */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="bg-gradient-to-r from-brand-950 via-brand-900 to-brand-800 rounded-3xl p-8 sm:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-brand-950 via-brand-900 to-brand-800 rounded-[var(--radius-lg)] p-8 sm:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
           <div className="space-y-2 max-w-xl text-center md:text-left relative z-10">
-            <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            <h3 className="font-display text-2xl sm:text-3xl font-bold tracking-tight">
               Get Exclusive Offers & Flash Deals
             </h3>
             <p className="text-xs sm:text-sm text-brand-100/80">
@@ -673,9 +691,9 @@ export default async function HomePage() {
             <input
               type="email"
               placeholder="Enter your email address"
-              className="px-4 py-3 rounded-xl bg-white/10 text-white placeholder-brand-200/60 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white text-xs sm:text-sm w-full backdrop-blur-md"
+              className="px-4 py-3 rounded-[var(--radius-sm)] bg-white/10 text-white placeholder-brand-200/60 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white text-xs sm:text-sm w-full backdrop-blur-md"
             />
-            <button className="px-6 py-3 bg-white text-brand-950 font-bold rounded-xl text-xs sm:text-sm hover:bg-brand-50 transition-all duration-200 shrink-0 shadow-lg hover:shadow-white/20">
+            <button className="px-6 py-3 bg-white text-brand-950 font-bold rounded-[var(--radius-sm)] text-xs sm:text-sm hover:bg-brand-50 transition-all duration-200 shrink-0 shadow-lg hover:shadow-white/20">
               Subscribe
             </button>
           </div>

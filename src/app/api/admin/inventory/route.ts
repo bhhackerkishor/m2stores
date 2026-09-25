@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { InventoryState } from "@/models/Inventory";
 import { logger } from "@/lib/logger";
-import { errorResponse, successResponse, paginatedResponse } from "@/lib/api-response";
+import { errorResponse, paginatedResponse } from "@/lib/api-response";
+import { requirePermission } from "@/lib/auth-server";
+import { AppError } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
   try {
+    await requirePermission("inventory.read");
     await connectDB();
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
@@ -33,6 +36,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(paginatedResponse(mapped, page, limit, total));
   } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(errorResponse(error.code, error.message), { status: error.statusCode });
+    }
     logger.error("Admin inventory list error", "inventory", { error: String(error) });
     return NextResponse.json(errorResponse("INTERNAL_ERROR", "Failed to list inventory"), { status: 500 });
   }

@@ -13,9 +13,10 @@ import { logger } from "@/lib/logger";
  */
 export class PaymentService {
   /** Idempotent initiate: one Payment doc per order; re-initiate updates it. */
-  static async initiate(orderNumber: string, idempotencyKey?: string) {
+  static async initiate(orderNumber: string, idempotencyKey?: string, userId?: string) {
     await connectDB();
-    const order: any = await Order.findOne({ orderNumber }).lean();
+    // When called on behalf of a customer, ownership is part of the filter (BOLA guard).
+    const order: any = await Order.findOne({ orderNumber, ...(userId ? { userId } : {}) }).lean();
     if (!order) throw new AppError("Order not found", 404, "NOT_FOUND");
     if (["DELIVERED", "CANCELLED", "REFUNDED", "PAYMENT_RECEIVED"].includes(order.orderStatus)) {
       throw new AppError(`Cannot pay for order in status ${order.orderStatus}`, 400, "INVALID_STATUS");

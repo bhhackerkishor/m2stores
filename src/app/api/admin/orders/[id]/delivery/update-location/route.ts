@@ -1,3 +1,4 @@
+import { updateLocationSchema } from "@/validators/route-guards";
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth-server";
 import { hasPermission } from "@/config/permissions";
@@ -6,6 +7,7 @@ import { connectDB } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { AppError } from "@/lib/errors";
+
 
 /**
  * POST /api/admin/orders/[id]/delivery/update-location
@@ -19,12 +21,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json(errorResponse("FORBIDDEN", "Permission required"), { status: 403 });
     }
     const { id } = await params;
-    const body = await request.json();
-    const { location, city, note, status } = body;
-
-    if (!location?.trim()) {
-      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Location name is required"), { status: 400 });
+    const body = await request.json().catch(() => null);
+    const parsed = updateLocationSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Location name is required"),
+        { status: 400 }
+      );
     }
+    const { location, city, note, status } = parsed.data;
 
     await connectDB();
     const order: any = await Order.findOne({ orderNumber: id });

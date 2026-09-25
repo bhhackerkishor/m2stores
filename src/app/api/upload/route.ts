@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth-server";
+import { hasPermission } from "@/config/permissions";
 import cloudinary from "@/lib/cloudinary";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { logger } from "@/lib/logger";
@@ -9,6 +10,14 @@ export async function POST(request: NextRequest) {
     const session = await getSessionFromCookie().catch(() => null);
     if (!session) {
       return NextResponse.json(errorResponse("UNAUTHORIZED", "Login required"), { status: 401 });
+    }
+    const canUpload =
+      hasPermission(session.role, "products.write" as any) ||
+      hasPermission(session.role, "banners.write" as any) ||
+      hasPermission(session.role, "settings.write" as any) ||
+      hasPermission(session.role, "homepage.write" as any);
+    if (!canUpload) {
+      return NextResponse.json(errorResponse("FORBIDDEN", "Upload permission required"), { status: 403 });
     }
 
     const formData = await request.formData();
@@ -60,9 +69,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     logger.error("Upload error", "upload", { error: String(error?.message || error) });
-    return NextResponse.json(
-      errorResponse("UPLOAD_FAILED", error?.message || "Failed to upload image"),
-      { status: 500 }
-    );
+    return NextResponse.json(errorResponse("UPLOAD_FAILED", "Failed to upload image"), { status: 500 });
   }
 }

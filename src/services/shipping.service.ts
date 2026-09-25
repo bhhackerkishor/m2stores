@@ -4,6 +4,56 @@ import { Order } from "@/models/Order";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
+export type PincodeMode = "all" | "allowlist" | "blocklist";
+
+export interface PincodeRuleResult {
+  ok: boolean;
+  reason?: string;
+}
+
+/**
+ * Shared pincode gate used by delivery serviceability + COD checks.
+ * - mode "all": everything passes (default)
+ * - mode "allowlist": pass only exact pincodes or 3-digit prefixes listed
+ * - mode "blocklist": pass everything except blocked exact pincodes/prefixes
+ * Mode defaults are inferred from stored lists when the explicit field is absent.
+ */
+export function matchPincodeRule(
+  pincode: string,
+  mode: string | undefined,
+  allowed: string[] | undefined,
+  allowedPrefixes: string[] | undefined,
+  blocked: string[] | undefined,
+  label = "This"
+): PincodeRuleResult {
+  const allow = (allowed || []).filter(Boolean);
+  const prefixes = (allowedPrefixes || []).filter(Boolean);
+  const block = (blocked || []).filter(Boolean);
+  const effective: PincodeMode =
+    mode === "all" || mode === "allowlist" || mode === "blocklist"
+      ? mode
+      : block.length > 0
+        ? "blocklist"
+        : allow.length > 0 || prefixes.length > 0
+          ? "allowlist"
+          : "all";
+
+  if (effective === "all") return { ok: true };
+  if (!pincode) return { ok: true }; // no pincode known yet — don't block; server rechecks with real address
+
+  if (effective === "blocklist") {
+    // Only the explicit blocked list applies — allowed prefixes are a
+    // leftover of allowlist config and must NOT flip into blocks.
+    if (block.includes(pincode)) return { ok: false, reason: `${label} is not available for pincode ${pincode}` };
+    return { ok: true };
+  }
+
+  // allowlist
+  if (allow.includes(pincode)) return { ok: true };
+  if (prefixes.some((p) => pincode.startsWith(p))) return { ok: true };
+  return { ok: false, reason: `${label} is not available for pincode ${pincode}` };
+}
+
 export type ShippingMethod = "STANDARD" | "EXPRESS";
 
 export interface ShipmentInput {
@@ -94,11 +144,30 @@ export class ShippingService {
     if (!s.isCODEnabled) return { eligible: false, reason: "COD is currently disabled", fee: 0 };
     if (subtotal < (s.codMinOrderValue ?? 0)) return { eligible: false, reason: `COD requires minimum order of ₹${s.codMinOrderValue}`, fee: 0 };
     if (subtotal > (s.codMaxOrderValue ?? 50000)) return { eligible: false, reason: `COD not available above ₹${s.codMaxOrderValue}`, fee: 0 };
-    const allowed: string[] = s.codAllowedPincodes || [];
-    if (allowed.length > 0 && !allowed.includes(pincode)) {
-      return { eligible: false, reason: `COD not available for pincode ${pincode}`, fee: 0 };
-    }
+    const match = matchPincodeRule(
+      pincode,
+      s.codPincodeMode,
+      s.codAllowedPincodes,
+      s.codAllowedPrefixes,
+      s.codBlockedPincodes,
+      "COD"
+    );
+    if (!match.ok) return { eligible: false, reason: match.reason || `COD not available for pincode ${pincode}`, fee: 0 };
     return { eligible: true, fee: s.codFee ?? 0 };
+  }
+
+  /** Is this pincode serviceable for delivery at all? */
+  static async checkDelivery(pincode: string): Promise<{ deliverable: boolean; reason?: string }> {
+    const s = await this.getSettings();
+    const match = matchPincodeRule(
+      pincode,
+      s.deliveryPincodeMode,
+      s.deliveryAllowedPincodes,
+      s.deliveryAllowedPrefixes,
+      s.deliveryBlockedPincodes,
+      "Delivery"
+    );
+    return { deliverable: match.ok, reason: match.reason };
   }
 
   static async createShipment(orderNumber: string, input: ShipmentInput, actorId?: string) {

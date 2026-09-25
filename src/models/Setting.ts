@@ -26,7 +26,17 @@ export interface ISetting extends Document {
   codMinOrderValue: number;
   codMaxOrderValue: number;
   codFee: number;
+  /** COD pincode gate: "all" = every pincode, "allowlist" = only allowed pincodes/prefixes, "blocklist" = everything except blocked. */
+  codPincodeMode: "all" | "allowlist" | "blocklist";
   codAllowedPincodes: string[];
+  /** 3-digit PIN prefixes allowed when codPincodeMode = "allowlist" (e.g. "600".."641" = Tamil Nadu). */
+  codAllowedPrefixes: string[];
+  codBlockedPincodes: string[];
+  /** Delivery serviceability gate with the same three modes. */
+  deliveryPincodeMode: "all" | "allowlist" | "blocklist";
+  deliveryAllowedPincodes: string[];
+  deliveryAllowedPrefixes: string[];
+  deliveryBlockedPincodes: string[];
   codDaysCal:number;
   returnWindowDays: number;
   phonePeMerchantId?: string;
@@ -71,7 +81,14 @@ const SettingSchema = new Schema<ISetting>(
     codMinOrderValue: { type: Number, default: 0 },
     codMaxOrderValue: { type: Number, default: 10000 },
     codFee: { type: Number, default: 0 },
+    codPincodeMode: { type: String, enum: ["all", "allowlist", "blocklist"], default: "all" },
     codAllowedPincodes: { type: [String], default: [] },
+    codAllowedPrefixes: { type: [String], default: [] },
+    codBlockedPincodes: { type: [String], default: [] },
+    deliveryPincodeMode: { type: String, enum: ["all", "allowlist", "blocklist"], default: "all" },
+    deliveryAllowedPincodes: { type: [String], default: [] },
+    deliveryAllowedPrefixes: { type: [String], default: [] },
+    deliveryBlockedPincodes: { type: [String], default: [] },
     returnWindowDays: { type: Number, default: 7 },
     codDaysCal: { type: Number, default: 3 },
     phonePeMerchantId: { type: String },

@@ -47,12 +47,13 @@ export function Navbar() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center justify-between gap-3">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0 no-select">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center shadow-sm">
-              <span className="text-white font-extrabold text-sm sm:text-lg tracking-tight">M2</span>
+          {/* Logo — the mark carries a small tag-hole dot, the same device the hero uses */}
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 no-select">
+            <div className="relative w-9 h-9 sm:w-10 sm:h-10 bg-brand-600 rounded-[var(--radius-sm)] flex items-center justify-center shadow-sm">
+              <span className="font-display text-white font-bold text-sm sm:text-base tracking-tight">M2</span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-warning-400 ring-2 ring-white dark:ring-surface-950" aria-hidden="true" />
             </div>
-            <span className="text-lg sm:text-xl font-extrabold text-surface-900 dark:text-surface-100 hidden sm:block tracking-tight">
+            <span className="font-display text-lg sm:text-xl font-bold text-surface-900 dark:text-surface-100 hidden sm:block tracking-tight">
               M2Stores
             </span>
           </Link>
@@ -65,7 +66,7 @@ export function Navbar() {
           {/* Mobile search toggle */}
           <button
             onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            className="md:hidden p-2.5 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target"
+            className="md:hidden p-2.5 rounded-[var(--radius-sm)] hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target"
             aria-label="Search"
           >
             <Search className="w-5 h-5 text-surface-600 dark:text-surface-400" />
@@ -76,7 +77,7 @@ export function Navbar() {
             {/* Theme toggle */}
             <button
               onClick={() => setTheme(resolved === "dark" ? "light" : "dark")}
-              className="p-2.5 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target"
+              className="p-2.5 rounded-[var(--radius-sm)] hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target"
               aria-label={`Switch to ${resolved === "dark" ? "light" : "dark"} mode`}
             >
               {resolved === "dark" ? (
@@ -90,7 +91,7 @@ export function Navbar() {
             <Link
               href="/profile"
               aria-label="Account"
-              className="p-2.5 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target hidden sm:flex"
+              className="p-2.5 rounded-[var(--radius-sm)] hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target hidden sm:flex"
             >
               <User className="w-5 h-5 text-surface-600 dark:text-surface-400" />
             </Link>
@@ -99,7 +100,7 @@ export function Navbar() {
             <Link
               href="/wishlist"
               aria-label={`Wishlist (${wished.length} items)`}
-              className="p-2.5 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target relative"
+              className="p-2.5 rounded-[var(--radius-sm)] hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target relative"
             >
               <Heart className="w-5 h-5 text-surface-600 dark:text-surface-400" />
               {wished.length > 0 && (
@@ -113,11 +114,11 @@ export function Navbar() {
             <Link
               href="/notifications"
               aria-label={`Notifications (${unread} unread)`}
-              className="p-2.5 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target relative hidden sm:flex"
+              className="p-2.5 rounded-[var(--radius-sm)] hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target relative hidden sm:flex"
             >
               <Bell className="w-5 h-5 text-surface-600 dark:text-surface-400" />
               {unread > 0 && (
-                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-warning-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white dark:ring-surface-950">
+                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-warning-500 text-brand-950 text-[10px] font-bold rounded-full flex items-center justify-center px-1 ring-2 ring-white dark:ring-surface-950">
                   {unread > 9 ? "9+" : unread}
                 </span>
               )}
@@ -127,7 +128,7 @@ export function Navbar() {
             <Link
               href="/cart"
               aria-label={`Cart (${totalItems} items)`}
-              className="p-2.5 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target relative"
+              className="p-2.5 rounded-[var(--radius-sm)] hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target relative"
             >
               <ShoppingCart className="w-5 h-5 text-surface-600 dark:text-surface-400" />
               {totalItems > 0 && (
@@ -140,7 +141,7 @@ export function Navbar() {
             {/* Mobile menu */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2.5 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target"
+              className="md:hidden p-2.5 rounded-[var(--radius-sm)] hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors touch-target"
               aria-label="Menu"
               aria-expanded={mobileMenuOpen}
             >
@@ -172,7 +173,7 @@ export function Navbar() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+                  className="block px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
                 >
                   {item.label}
                 </Link>

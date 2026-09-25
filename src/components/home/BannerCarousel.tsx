@@ -16,12 +16,12 @@ interface Banner {
 
 function BannerSkeleton() {
   return (
-    <div className="relative w-full aspect-[2/1] sm:aspect-[2.5/1] md:aspect-[3/1] rounded-2xl bg-surface-200/60 dark:bg-surface-800/60 animate-pulse border border-surface-300/40 dark:border-surface-700/40 overflow-hidden">
+    <div className="relative w-full aspect-[2/1] sm:aspect-[2.5/1] md:aspect-[3/1] rounded-[var(--radius-lg)] bg-surface-200/60 dark:bg-surface-800/60 animate-pulse border border-surface-300/40 dark:border-surface-700/40 overflow-hidden">
       <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-8">
         <div className="space-y-3">
           <div className="h-5 w-28 bg-surface-300 dark:bg-surface-700 rounded-full" />
-          <div className="h-7 w-3/4 bg-surface-300 dark:bg-surface-700 rounded-lg" />
-          <div className="h-4 w-1/2 bg-surface-300 dark:bg-surface-700 rounded" />
+          <div className="h-7 w-3/4 bg-surface-300 dark:bg-surface-700 rounded-[var(--radius-sm)]" />
+          <div className="h-4 w-1/2 bg-surface-300 dark:bg-surface-700 rounded-[var(--radius-xs)]" />
         </div>
       </div>
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
@@ -162,7 +162,7 @@ export default function BannerCarousel() {
     >
       {/* Slides container */}
       <div
-        className="relative overflow-hidden rounded-2xl aspect-[2/1] sm:aspect-[2.5/1] md:aspect-[3/1] cursor-grab active:cursor-grabbing"
+        className="relative overflow-hidden rounded-[var(--radius-lg)] aspect-[2/1] sm:aspect-[2.5/1] md:aspect-[3/1] cursor-grab active:cursor-grabbing"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -200,7 +200,7 @@ export default function BannerCarousel() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
                 {/* Text overlay */}
                 <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 md:p-8 pointer-events-none">
-                  <h2 className="text-white text-lg sm:text-2xl md:text-3xl font-extrabold tracking-tight drop-shadow-lg">
+                  <h2 className="font-display text-white text-lg sm:text-2xl md:text-3xl font-bold tracking-tight drop-shadow-lg">
                     {banner.title}
                   </h2>
                   {banner.subtitle && (

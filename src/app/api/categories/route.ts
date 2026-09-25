@@ -3,16 +3,18 @@ import { connectDB } from "@/lib/db";
 import { Category } from "@/models/Category";
 import { logger } from "@/lib/logger";
 import { errorResponse, successResponse, paginatedResponse } from "@/lib/api-response";
-
-
-
+import { categorySchema, categoryListQuerySchema } from "@/validators/catalog";
 
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    const { searchParams } = request.nextUrl;
-    const parentId = searchParams.get("parentId");
-    const activeOnly = searchParams.get("active") !== "false";
+    const query = Object.fromEntries(request.nextUrl.searchParams.entries());
+    const parsedQuery = categoryListQuerySchema.safeParse(query);
+    if (!parsedQuery.success) {
+      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Invalid query parameters"), { status: 400 });
+    }
+    const { parentId } = parsedQuery.data;
+    const activeOnly = request.nextUrl.searchParams.get("active") !== "false";
 
     const filter: any = {};
     if (parentId) filter.parentCategoryId = parentId;
@@ -32,12 +34,15 @@ export async function POST(request: NextRequest) {
   try {
     const { requirePermission } = await import("@/lib/auth-server");
     await requirePermission("categories.write");
-    const body = await request.json();
-    const { name, slug, description, image, parentCategoryId, attributes, sortOrder } = body;
-
-    if (!name || !slug) {
-      return NextResponse.json(errorResponse("VALIDATION_ERROR", "Name and slug are required"), { status: 400 });
+    const body = await request.json().catch(() => null);
+    const parsed = categorySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        errorResponse("VALIDATION_ERROR", parsed.error.errors[0]?.message || "Invalid category data"),
+        { status: 400 }
+      );
     }
+    const { name, slug, description, image, parentCategoryId, attributes, sortOrder, isActive } = parsed.data;
 
     await connectDB();
 
@@ -52,10 +57,11 @@ export async function POST(request: NextRequest) {
       slug: slug.toLowerCase(),
       description,
       image,
-      parentCategoryId,
+      parentCategoryId: parentCategoryId || undefined,
       level,
       attributes: attributes || [],
       sortOrder: sortOrder || 0,
+      ...(isActive !== undefined ? { isActive } : {}),
     });
 
     logger.info("Category created", "category", { categoryId: category._id });
